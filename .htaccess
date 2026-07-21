@@ -1,0 +1,25 @@
+# Security headers
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "geolocation=(), camera=(), microphone=()"
+
+  # Only takes effect once the site is served over HTTPS in production
+  Header always set Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+
+  # Inline <script>/<style> blocks are used throughout the site's pages, so
+  # 'unsafe-inline' is required until those are moved into external files.
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://mseywoukzrktdghstxwv.supabase.co; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
+</IfModule>
+
+# Force HTTPS in production (safe to leave in for local XAMPP use too;
+# it only redirects when a request already declares itself as HTTP behind a proxy)
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} off
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https
+  RewriteCond %{HTTP_HOST} !^localhost
+  RewriteCond %{HTTP_HOST} !^127\.0\.0\.1
+  RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>

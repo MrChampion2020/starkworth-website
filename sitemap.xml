@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://starkworth.org/</loc><priority>1.0</priority></url>
+  <url><loc>https://starkworth.org/pages/about.html</loc><priority>0.8</priority></url>
+  <url><loc>https://starkworth.org/pages/contact.html</loc><priority>0.7</priority></url>
+  <url><loc>https://starkworth.org/pages/client-portal.html</loc><priority>0.6</priority></url>
+  <url><loc>https://starkworth.org/pages/worker-register.html</loc><priority>0.8</priority></url>
+  <url><loc>https://starkworth.org/pages/worker-login.html</loc><priority>0.5</priority></url>
+  <url><loc>https://starkworth.org/pages/client-agreement.html</loc><priority>0.5</priority></url>
+  <url><loc>https://starkworth.org/pages/faq.html</loc><priority>0.6</priority></url>
+  <url><loc>https://starkworth.org/pages/guides.html</loc><priority>0.7</priority></url>
+  <url><loc>https://starkworth.org/pages/guides/what-is-ai-data-annotation.html</loc><priority>0.6</priority></url>
+  <url><loc>https://starkworth.org/pages/guides/account-owner-vs-annotator.html</loc><priority>0.6</priority></url>
+  <url><loc>https://starkworth.org/pages/guides/what-is-a-profit-sharing-agreement.html</loc><priority>0.6</priority></url>
+  <url><loc>https://starkworth.org/pages/guides/ownership-vs-management.html</loc><priority>0.6</priority></url>
+  <url><loc>https://starkworth.org/pages/guides/become-an-account-owner.html</loc><priority>0.6</priority></url>
+  <url><loc>https://starkworth.org/pages/guides/live-screening.html</loc><priority>0.6</priority></url>
+  <url><loc>https://starkworth.org/pages/guides/identity-verification.html</loc><priority>0.6</priority></url>
+  <url><loc>https://starkworth.org/pages/guides/prepare-id-documents.html</loc><priority>0.6</priority></url>
+  <url><loc>https://starkworth.org/pages/guides/register-as-annotator.html</loc><priority>0.6</priority></url>
+  <url><loc>https://starkworth.org/pages/guides/maximize-earnings.html</loc><priority>0.6</priority></url>
+  <url><loc>https://starkworth.org/pages/guides/mistakes-before-signing.html</loc><priority>0.6</priority></url>
+  <url><loc>https://starkworth.org/pages/guides/end-your-agreement.html</loc><priority>0.6</priority></url>
+  <url><loc>https://starkworth.org/pages/guides/how-payouts-are-calculated.html</loc><priority>0.6</priority></url>
+  <url><loc>https://starkworth.org/pages/guides/profit-sharing-percentage.html</loc><priority>0.6</priority></url>
+  <url><loc>https://starkworth.org/pages/guides/bank-transfer-vs-paypal.html</loc><priority>0.6</priority></url>
+  <url><loc>https://starkworth.org/pages/guides/late-payout.html</loc><priority>0.6</priority></url>
+  <url><loc>https://starkworth.org/pages/guides/payment-security.html</loc><priority>0.6</priority></url>
+  <url><loc>https://starkworth.org/pages/guides/data-privacy-explained.html</loc><priority>0.6</priority></url>
+  <url><loc>https://starkworth.org/pages/guides/reset-password.html</loc><priority>0.6</priority></url>
+  <url><loc>https://starkworth.org/pages/guides/glossary.html</loc><priority>0.6</priority></url>
+  <url><loc>https://starkworth.org/pages/support.html</loc><priority>0.5</priority></url>
+  <url><loc>https://starkworth.org/pages/privacy-policy.html</loc><priority>0.4</priority></url>
+  <url><loc>https://starkworth.org/pages/terms.html</loc><priority>0.4</priority></url>
+</urlset>

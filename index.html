@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Starkworth — Profit-Sharing for AI Data Annotation Accounts</title>
+  <meta name="description" content="Starkworth manages AI data-annotation accounts on behalf of Account Owners under a signed profit-sharing agreement, with Annotators paid weekly for the work they perform." />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Starkworth — Profit-Sharing for AI Data Annotation Accounts" />
+  <meta property="og:description" content="A transparent profit-sharing agreement between Account Owners and Starkworth, with Annotators paid weekly." />
+  <meta property="og:url" content="https://starkworth.org/" />
+  <meta property="og:image" content="https://starkworth.org/assets/logo.png" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Starkworth — Profit-Sharing for AI Data Annotation Accounts" />
+  <meta name="twitter:description" content="A transparent profit-sharing agreement between Account Owners and Starkworth, with Annotators paid weekly." />
+  <link rel="canonical" href="https://starkworth.org/" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/icon-16.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/icon-32.png" />
+  <link rel="icon" type="image/png" sizes="48x48" href="/assets/icons/icon-48.png" />
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png" />
+  <link rel="manifest" href="/site.webmanifest" />
+  <meta name="theme-color" content="#022c22" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Starkworth LLC",
+    "url": "https://starkworth.org/",
+    "logo": "https://starkworth.org/assets/logo.png",
+    "email": "contact@starkworth.org"
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SiteNavigationElement",
+    "name": ["Home", "About", "Contact", "FAQ", "Guides", "Account Owner Login", "Join as an Annotator"],
+    "url": [
+      "https://starkworth.org/",
+      "https://starkworth.org/pages/about.html",
+      "https://starkworth.org/pages/contact.html",
+      "https://starkworth.org/pages/faq.html",
+      "https://starkworth.org/pages/guides.html",
+      "https://starkworth.org/pages/client-portal.html",
+      "https://starkworth.org/pages/worker-register.html"
+    ]
+  }
+  </script>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/pages.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" aria-label="Main navigation">
+    <div class="nav-container">
+      <a href="index.html" class="logo"><img src="assets/logo.png" alt="Starkworth" width="100" height="100" style="height:100px;width:auto;"></a>
+      <ul class="nav-links">
+        <li><a href="index.html" class="active" aria-current="page">Home</a></li>
+        <li><a href="pages/about.html">About</a></li>
+        <li><a href="pages/contact.html">Contact</a></li>
+        <li><a href="pages/faq.html">FAQ</a></li>
+        <li><a href="pages/guides.html">Guides</a></li>
+      </ul>
+      <div class="nav-buttons">
+        <a href="pages/client-portal.html" class="btn btn-outline">Account Owner Login</a>
+        <a href="pages/worker-register.html" class="btn btn-primary">Join as Annotator</a>
+      </div>
+      <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+    <!-- Mobile menu -->
+    <div class="mobile-menu" id="mobileMenu">
+      <a href="index.html" class="active" aria-current="page">Home</a>
+      <a href="pages/about.html">About</a>
+      <a href="pages/contact.html">Contact</a>
+      <a href="pages/faq.html">FAQ</a>
+      <a href="pages/guides.html">Guides</a>
+      <a href="pages/client-portal.html">Account Owner Login</a>
+      <a href="pages/worker-register.html">Join as Annotator</a>
+    </div>
+  </nav>
+
+  <!-- HERO SECTION -->
+  <section class="hero">
+    <div class="hero-bg-shape"></div>
+    <div class="hero-content">
+      <span class="badge">Transparent. Fair. Profitable.</span>
+      <h1>A smarter way to <em id="heroRotator">share success</em></h1>
+      <p>Starkworth partners with AI Account Owners to manage data annotation operations through transparent profit-sharing agreements, while providing qualified Annotators with consistent weekly earning opportunities.</p>
+      <div class="hero-actions">
+        <a href="pages/client-portal.html" class="btn btn-primary btn-large">I'm an Account Owner</a>
+        <a href="pages/worker-register.html" class="btn btn-outline btn-large">I'm an Annotator</a>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="card-stack">
+        <div class="float-card card-1">
+          <div class="card-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21l4-1 11-11a2 2 0 0 0-3-3L4 17z"/><path d="M14 4l3 3"/></svg></div>
+          <div>
+            <strong>Agreement Signed</strong>
+            <span>Profit share: Fair %</span>
+          </div>
+        </div>
+        <div class="float-card card-2">
+          <div class="card-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14a8 8 0 0 1 16 0"/><rect x="2" y="14" width="20" height="3" rx="1"/><path d="M12 6v4"/></svg></div>
+          <div>
+            <strong>Annotator Registered</strong>
+            <span>Team member added</span>
+          </div>
+        </div>
+        <div class="float-card card-3">
+          <div class="card-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M12 8.5v7M14.3 10.2c0-1-1-1.7-2.3-1.7s-2.3.7-2.3 1.7c0 2.3 4.6 1.1 4.6 3.4c0 1-1 1.7-2.3 1.7s-2.3-.7-2.3-1.7"/></svg></div>
+          <div>
+            <strong>Payout Processed</strong>
+            <span>All parties notified</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PORTALS SECTION -->
+
+  <section class="portals">
+    <div class="section-container">
+      <span class="section-label">Get started</span>
+      <h2>Which best describes you?</h2>
+      <div class="portal-cards">
+        <div class="portal-card portal-client">
+          <div class="portal-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/></svg></div>
+          <h3>I'm an Account Owner</h3>
+          <p>Review the profit-sharing agreement, read the terms and conditions, and sign digitally to get started.</p>
+          <a href="pages/client-portal.html" class="btn btn-primary">Enter Account Owner Portal →</a>
+        </div>
+        <div class="portal-card portal-worker">
+          <div class="portal-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14a8 8 0 0 1 16 0"/><rect x="2" y="14" width="20" height="3" rx="1"/><path d="M12 6v4"/></svg></div>
+          <h3>I'm an Annotator</h3>
+          <p>Register your details, confirm your role, and become part of the team under a transparent agreement.</p>
+          <a href="pages/worker-register.html" class="btn btn-dark">Register as an Annotator →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+ <!-- BECOME AN ACCOUNT OWNER SECTION -->
+<section class="become-client">
+  <div class="section-container">
+    <span class="section-label">Get started</span>
+    <h2>How to become an Account Owner</h2>
+    <p class="become-client-sub">Starkworth manages your AI freelance platform account professionally — so you earn without doing the work yourself. Here is exactly how it works:</p>
+
+    <div class="become-steps">
+
+      <div class="become-step">
+        <div class="become-step-num">01</div>
+        <div class="become-step-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 2.5a12 12 0 0 0 5 5L16 14l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg></div>
+        <h3>Reach out to us</h3>
+        <p>Contact Starkworth through our contact form or directly. We will explain everything about how we manage AI freelance platform accounts and answer all your questions.</p>
+      </div>
+
+      <div class="become-step">
+        <div class="become-step-num">02</div>
+        <div class="become-step-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10c1 1 1 2 1 3h6c0-1 0-2 1-3a6 6 0 0 0-4-10z"/></svg></div>
+        <h3>Get a full explanation</h3>
+        <p>We walk you through exactly how the process works, how your earnings are shared and how your account is kept safe. No pressure — just clear honest information.</p>
+      </div>
+
+      <div class="become-step">
+        <div class="become-step-num">03</div>
+        <div class="become-step-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="12" r="2"/><path d="M13 10h6M13 14h4"/></svg></div>
+        <h3>Verify your identity</h3>
+        <p>All you need is a valid ID card for verification. Starkworth will guide you through the full account opening process — we handle everything else.</p>
+      </div>
+
+      <div class="become-step">
+        <div class="become-step-num">04</div>
+        <div class="become-step-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="1"/><path d="M2 19h20"/></svg></div>
+        <h3>Complete live screening</h3>
+        <p>You will need a laptop for a short live screening session on the platform. This is a standard requirement by the AI freelance platforms — Starkworth will prepare you fully.</p>
+      </div>
+
+      <div class="become-step">
+        <div class="become-step-num">05</div>
+        <div class="become-step-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21l4-1 11-11a2 2 0 0 0-3-3L4 17z"/><path d="M14 4l3 3"/></svg></div>
+        <h3>Sign the agreement</h3>
+        <p>Once you are comfortable and ready you sign our profit sharing agreement. Starkworth manages your account and you receive your earnings every Wednesday by 3:00 PM (CST).</p>
+      </div>
+
+      <div class="become-step">
+        <div class="become-step-num">06</div>
+        <div class="become-step-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M12 8.5v7M14.3 10.2c0-1-1-1.7-2.3-1.7s-2.3.7-2.3 1.7c0 2.3 4.6 1.1 4.6 3.4c0 1-1 1.7-2.3 1.7s-2.3-.7-2.3-1.7"/></svg></div>
+        <h3>Start earning</h3>
+        <p>Starkworth's team manages your account across AI-based freelance platforms, and your weekly payment arrives every Wednesday by 3:00 PM (CST).</p>
+      </div>
+
+    </div>
+
+    <div class="become-cta">
+      <div class="notice notice-info" style="max-width:600px;margin:0 auto 28px;">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>
+        <span>You do not need any prior experience with AI freelance platforms. Starkworth handles everything from account setup to daily management.</span>
+      </div>
+      <a href="pages/contact.html" class="btn btn-primary btn-large">Contact Us to Get Started</a>
+    </div>
+
+  </div>
+</section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how-it-works">
+    <div class="section-container">
+      <span class="section-label">How it works</span>
+      <h2>Simple. Clear. Binding.</h2>
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-number">01</div>
+          <h3>Read the terms</h3>
+          <p>Account Owners review the full profit-sharing terms and conditions before committing to anything.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-number">02</div>
+          <h3>Sign the agreement</h3>
+          <p>A legally structured agreement is signed digitally, outlining exact profit split percentages and timelines.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-number">03</div>
+          <h3>Annotators register</h3>
+          <p>Team members create their profiles, confirm their roles, and are linked to the project.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-number">04</div>
+          <h3>Everyone benefits</h3>
+          <p>Profits are tracked and distributed according to the signed agreement — transparently and on time.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- REVIEWS -->
+  <section class="reviews">
+    <div class="section-container">
+      <span class="section-label">Testimonials</span>
+      <h2>What our community says</h2>
+      <div class="reviews-grid">
+
+        <div class="review-card">
+          <div class="review-stars">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.9L22 9.6l-5.5 4.8L18 22l-6-4-6 4 1.5-7.6L2 9.6l7.1-.7L12 2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.9L22 9.6l-5.5 4.8L18 22l-6-4-6 4 1.5-7.6L2 9.6l7.1-.7L12 2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.9L22 9.6l-5.5 4.8L18 22l-6-4-6 4 1.5-7.6L2 9.6l7.1-.7L12 2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.9L22 9.6l-5.5 4.8L18 22l-6-4-6 4 1.5-7.6L2 9.6l7.1-.7L12 2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.9L22 9.6l-5.5 4.8L18 22l-6-4-6 4 1.5-7.6L2 9.6l7.1-.7L12 2z"/></svg>
+          </div>
+          <p class="review-quote">"Signing was straightforward and every term was spelled out before I committed. My payout has landed on time every single Wednesday."</p>
+          <div class="review-person">
+            <div class="review-avatar" style="background:var(--primary);">MT</div>
+            <div>
+              <strong>Marcus T.</strong>
+              <span>Account Owner</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="review-card">
+          <div class="review-stars">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.9L22 9.6l-5.5 4.8L18 22l-6-4-6 4 1.5-7.6L2 9.6l7.1-.7L12 2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.9L22 9.6l-5.5 4.8L18 22l-6-4-6 4 1.5-7.6L2 9.6l7.1-.7L12 2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.9L22 9.6l-5.5 4.8L18 22l-6-4-6 4 1.5-7.6L2 9.6l7.1-.7L12 2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.9L22 9.6l-5.5 4.8L18 22l-6-4-6 4 1.5-7.6L2 9.6l7.1-.7L12 2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.9L22 9.6l-5.5 4.8L18 22l-6-4-6 4 1.5-7.6L2 9.6l7.1-.7L12 2z"/></svg>
+          </div>
+          <p class="review-quote">"I registered on a Friday and heard back within two days. The weekly payout process has been consistent from day one."</p>
+          <div class="review-person">
+            <div class="review-avatar" style="background:var(--accent);">AK</div>
+            <div>
+              <strong>Amara K.</strong>
+              <span>Annotator</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="review-card">
+          <div class="review-stars">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.9L22 9.6l-5.5 4.8L18 22l-6-4-6 4 1.5-7.6L2 9.6l7.1-.7L12 2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.9L22 9.6l-5.5 4.8L18 22l-6-4-6 4 1.5-7.6L2 9.6l7.1-.7L12 2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.9L22 9.6l-5.5 4.8L18 22l-6-4-6 4 1.5-7.6L2 9.6l7.1-.7L12 2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.9L22 9.6l-5.5 4.8L18 22l-6-4-6 4 1.5-7.6L2 9.6l7.1-.7L12 2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.9L22 9.6l-5.5 4.8L18 22l-6-4-6 4 1.5-7.6L2 9.6l7.1-.7L12 2z"/></svg>
+          </div>
+          <p class="review-quote">"What stood out was how clearly the agreement explained the split before I signed anything. No surprises since."</p>
+          <div class="review-person">
+            <div class="review-avatar" style="background:var(--dark);">PD</div>
+            <div>
+              <strong>Priya D.</strong>
+              <span>Account Owner</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-brand">
+        <a href="index.html" class="logo"><img src="assets/logo.png" alt="Starkworth" width="100" height="100" style="height:100px;width:auto;"></a>
+        <p>Built on trust. Powered by transparency.</p>
+        <div class="footer-socials">
+          <a href="#" class="footer-social-link" aria-label="Starkworth on X (Twitter)"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.9 2H22l-7.6 8.7L23 22h-7.1l-5.5-6.9L4 22H1l8.1-9.3L1 2h7.3l5 6.3L18.9 2Zm-1.2 18h1.9L7.4 4H5.3l12.4 16Z"/></svg></a>
+          <a href="#" class="footer-social-link" aria-label="Starkworth on LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4.98 3.5C4.98 4.88 3.86 6 2.48 6S0 4.88 0 3.5 1.12 1 2.5 1s2.48 1.12 2.48 2.5ZM.24 8.25h4.5V23H.24V8.25ZM8.5 8.25h4.31v2.01h.06c.6-1.13 2.07-2.33 4.27-2.33 4.56 0 5.4 3 5.4 6.9V23h-4.5v-6.75c0-1.61-.03-3.68-2.24-3.68-2.25 0-2.6 1.75-2.6 3.56V23H8.5V8.25Z"/></svg></a>
+          <a href="#" class="footer-social-link" aria-label="Starkworth on Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5"/><circle cx="12" cy="12" r="4.3"/><circle cx="17.4" cy="6.6" r="1.1" fill="currentColor" stroke="none"/></svg></a>
+          <a href="#" class="footer-social-link" aria-label="Starkworth on Facebook"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.5 22v-8.5H16l.4-3H13.5V8.4c0-.87.24-1.46 1.5-1.46H16.5V4.36C16.2 4.32 15.2 4.24 14 4.24c-2.5 0-4.2 1.53-4.2 4.33V10.5H7.3v3H9.8V22h3.7Z"/></svg></a>
+        </div>
+      </div>
+      <div class="footer-links">
+        <h4>Navigation</h4>
+        <a href="index.html">Home</a>
+        <a href="pages/about.html">About</a>
+        <a href="pages/contact.html">Contact</a>
+      <a href="pages/faq.html">FAQ</a>
+      <a href="pages/support.html">Support</a>
+      <a href="pages/guides.html">Guides</a>
+      </div>
+      <div class="footer-links">
+        <h4>Portals</h4>
+        <a href="pages/client-portal.html">Account Owner Portal</a>
+        <a href="pages/worker-register.html">Annotator Register</a>
+        <a href="pages/worker-login.html">Annotator Login</a>
+      </div>
+      <div class="footer-links">
+        <h4>Legal</h4>
+        <a href="pages/client-agreement.html">Agreement</a>
+        <a href="pages/privacy-policy.html">Privacy Policy</a>
+        <a href="pages/terms.html">Terms of Service</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 Starkworth LLC. All rights reserved. Starkworth LLC is a Limited Liability Company registered in Alabama, USA.</p>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <a href="pages/support.html" class="support-fab" aria-label="Get support">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+    <span class="support-fab-tooltip">Need help?</span>
+  </a>
+</body>
+</html>
