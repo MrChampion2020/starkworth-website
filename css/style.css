@@ -151,6 +151,14 @@ ul { list-style: none; }
 }
 .logo span { color: var(--accent); }
 
+/* Fits inside .nav-container at every breakpoint (80px default/tablet,
+   90px on small mobile) with comfortable padding on both sides — overrides
+   each page's inline height so nothing overflows the navbar and clips. */
+.logo img {
+  height: 60px !important;
+  width: auto !important;
+}
+
 .nav-links {
   display: flex;
   gap: 28px;
@@ -739,18 +747,12 @@ ul { list-style: none; }
 }
 /* Logo responsive fix */
 @media (max-width: 768px) {
-  .logo img {
-    height: 65px !important;
-  }
   .nav-container {
     height: 80px;
   }
 }
 
 @media (max-width: 480px) {
-  .logo img {
-    height: 100px !important;
-  }
   .nav-container {
     height: 90px;
   }
