@@ -807,3 +807,123 @@ ul { list-style: none; }
   .support-fab svg { width: 22px; height: 22px; }
   .support-fab-tooltip { display: none; }
 }
+
+/* ===========================
+   REGIONAL DISCLAIMER MODAL
+=========================== */
+.disclaimer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 44, 34, 0.72);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 500;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.disclaimer-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.disclaimer-modal {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  max-width: 640px;
+  width: 100%;
+  max-height: min(80vh, 720px);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+  transform: translateY(16px) scale(0.98);
+  transition: transform 0.25s ease;
+}
+.disclaimer-overlay.open .disclaimer-modal {
+  transform: translateY(0) scale(1);
+}
+
+.disclaimer-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.disclaimer-modal-header h2 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--dark);
+  letter-spacing: -0.3px;
+}
+.disclaimer-modal-header p {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.disclaimer-modal-close {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--bg);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.disclaimer-modal-close:hover {
+  background: var(--accent-light);
+  color: var(--primary);
+}
+.disclaimer-modal-close svg { width: 18px; height: 18px; }
+
+.disclaimer-modal-body {
+  padding: 20px 24px 24px;
+  overflow-y: auto;
+}
+.disclaimer-modal-body h3 {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--dark);
+  margin: 18px 0 6px;
+}
+.disclaimer-modal-body h3:first-child { margin-top: 0; }
+.disclaimer-modal-body p {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.65;
+}
+.disclaimer-modal-body ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.disclaimer-modal-body li {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.disclaimer-modal-footer {
+  padding: 16px 24px 24px;
+}
+.disclaimer-modal-footer .btn { width: 100%; text-align: center; }
+
+@media (max-width: 520px) {
+  .disclaimer-modal { max-height: 85vh; }
+  .disclaimer-modal-header { padding: 20px 18px 14px; }
+  .disclaimer-modal-body { padding: 16px 18px 20px; }
+  .disclaimer-modal-footer { padding: 12px 18px 20px; }
+}
