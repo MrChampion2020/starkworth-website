@@ -1,7 +1,7 @@
 {
   "name": "Starkworth",
   "short_name": "Starkworth",
-  "description": "Profit-sharing agreements for AI data-annotation accounts.",
+  "description": "Built on Trust. Driven by AI.",
   "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#022c22",
