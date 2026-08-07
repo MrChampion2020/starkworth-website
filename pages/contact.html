@@ -163,7 +163,7 @@
             <label for="message">Message</label>
             <textarea id="message" placeholder="Write your message here..." required></textarea>
           </div>
-          <button type="submit" class="btn btn-primary btn-block">Send Message</button>
+          <button type="submit" class="btn btn-primary btn-block" id="contactSubmitBtn">Send Message</button>
         </form>
         <!-- Success message (hidden by default) -->
         <div id="successMsg" style="display:none; margin-top: 20px;" class="notice notice-success">
@@ -226,18 +226,31 @@
   const subject = document.getElementById('subject').value;
   const message = document.getElementById('message').value;
 
-  const saved = await saveContact({
-    name: name,
-    email: email,
-    subject: subject,
-    message: message
-  });
+  const submitBtn = document.getElementById('contactSubmitBtn');
+  submitBtn.disabled = true;
+  const originalBtnText = submitBtn.textContent;
+  submitBtn.textContent = 'Sending...';
 
-  if (saved) {
-    document.getElementById('contactForm').style.display = 'none';
-    document.getElementById('successMsg').style.display = 'flex';
-  } else {
-    alert('Something went wrong. Please try again.');
+  try {
+    const saved = await saveContact({
+      name: name,
+      email: email,
+      subject: subject,
+      message: message
+    });
+
+    if (saved) {
+      document.getElementById('contactForm').style.display = 'none';
+      document.getElementById('successMsg').style.display = 'flex';
+    } else {
+      alert('Something went wrong. Please try again.');
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalBtnText;
+    }
+  } catch (err) {
+    alert('Network error — please check your connection and try again.');
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalBtnText;
   }
 });
   </script>
