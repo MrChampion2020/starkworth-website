@@ -578,22 +578,35 @@
   const notes = document.getElementById('notes').value;
   const notesWithAccountType = accountType ? `Account type: ${accountType}. ${notes}` : notes;
 
-  const saved = await saveAgreement({
-    full_name: name,
-    email: email,
-    phone: phone,
-    outlier_username: outlierUsername,
-    payment_method: paymentMethod,
-    notes: notesWithAccountType
-  });
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.disabled = true;
+  const originalBtnText = submitBtn.textContent;
+  submitBtn.textContent = 'Submitting...';
 
-  if (saved) {
-    document.getElementById('successName').textContent = name;
-    document.getElementById('agreementForm').style.display = 'none';
-    document.getElementById('signNotice').style.display = 'none';
-    document.getElementById('successState').style.display = 'block';
-  } else {
-    alert('Something went wrong. Please try again.');
+  try {
+    const saved = await saveAgreement({
+      full_name: name,
+      email: email,
+      phone: phone,
+      outlier_username: outlierUsername,
+      payment_method: paymentMethod,
+      notes: notesWithAccountType
+    });
+
+    if (saved) {
+      document.getElementById('successName').textContent = name;
+      document.getElementById('agreementForm').style.display = 'none';
+      document.getElementById('signNotice').style.display = 'none';
+      document.getElementById('successState').style.display = 'block';
+    } else {
+      alert('Something went wrong. Please try again.');
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalBtnText;
+    }
+  } catch (err) {
+    alert('Network error — please check your connection and try again.');
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalBtnText;
   }
 });
   </script>

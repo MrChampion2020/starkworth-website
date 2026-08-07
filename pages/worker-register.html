@@ -346,36 +346,42 @@
   registerBtn.disabled = true;
   registerBtn.textContent = 'Submitting...';
 
-  const signUpResult = await signUpWithPassword(email, password);
-  if (!signUpResult.ok) {
-    alert('Could not create your login: ' + (signUpResult.data.error_description || signUpResult.data.msg || 'Please try again.'));
-    registerBtn.disabled = false;
-    registerBtn.textContent = 'Submit Registration';
-    return;
-  }
+  try {
+    const signUpResult = await signUpWithPassword(email, password);
+    if (!signUpResult.ok) {
+      alert('Could not create your login: ' + (signUpResult.data.error_description || signUpResult.data.msg || 'Please try again.'));
+      registerBtn.disabled = false;
+      registerBtn.textContent = 'Submit Registration';
+      return;
+    }
 
-  const saved = await saveWorker({
-    first_name: firstName,
-    last_name: lastName,
-    email: email,
-    phone: phone,
-    country: country,
-    outlier_username: 'N/A',
-    outlier_email: email,
-    account_age: accountAge,
-    weekly_earnings: weeklyEarnings,
-    payment_method: payMethod
-  });
-
-  if (saved) {
-    document.getElementById('successWorkerName').textContent = firstName + ' ' + lastName;
-    document.getElementById('successWorkerEmail').textContent = email;
-    document.querySelectorAll('.form-group, .form-section-title, .notice, .acknowledge-label, #registerBtn').forEach(el => {
-      el.style.display = 'none';
+    const saved = await saveWorker({
+      first_name: firstName,
+      last_name: lastName,
+      email: email,
+      phone: phone,
+      country: country,
+      outlier_username: 'N/A',
+      outlier_email: email,
+      account_age: accountAge,
+      weekly_earnings: weeklyEarnings,
+      payment_method: payMethod
     });
-    document.getElementById('workerSuccess').style.display = 'block';
-  } else {
-    alert('Something went wrong saving your profile. Please try again.');
+
+    if (saved) {
+      document.getElementById('successWorkerName').textContent = firstName + ' ' + lastName;
+      document.getElementById('successWorkerEmail').textContent = email;
+      document.querySelectorAll('.form-group, .form-section-title, .notice, .acknowledge-label, #registerBtn').forEach(el => {
+        el.style.display = 'none';
+      });
+      document.getElementById('workerSuccess').style.display = 'block';
+    } else {
+      alert('Something went wrong saving your profile. Please try again.');
+      registerBtn.disabled = false;
+      registerBtn.textContent = 'Submit Registration';
+    }
+  } catch (err) {
+    alert('Network error — please check your connection and try again.');
     registerBtn.disabled = false;
     registerBtn.textContent = 'Submit Registration';
   }
