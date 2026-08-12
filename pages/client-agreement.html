@@ -427,7 +427,7 @@
         <div id="successState" style="display:none;" class="success-state">
           <div class="success-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg></div>
           <h3>Agreement Signed!</h3>
-          <p>Thank you. Your signed agreement has been submitted successfully. A confirmation copy will be sent to your email address within 24 hours.</p>
+          <p>Thank you. Your signed agreement has been submitted successfully, and your Account Owner Portal login is ready to use with the password you just created. A confirmation copy will be sent to your email address within 24 hours.</p>
           <div class="success-details">
             <div class="success-detail-item">
               <span>Name</span>
@@ -446,7 +446,8 @@
               <strong>Every Wednesday before 3PM</strong>
             </div>
           </div>
-          <a href="../index.html" class="btn btn-primary" style="margin-top: 24px;">Back to Home</a>
+          <a href="client-portal.html" class="btn btn-primary" style="margin-top: 24px;">Sign In to Portal</a>
+          <a href="../index.html" class="btn btn-outline" style="margin-top: 10px;">Back to Home</a>
         </div>
 
       </div>
@@ -506,6 +507,14 @@
     document.getElementById('agreementDate').textContent = dateStr;
     document.getElementById('signingDate').textContent = dateStr;
     document.getElementById('successDate').textContent = dateStr;
+
+    // If we just arrived here from creating a login on the Account Owner
+    // Portal's Sign Up tab, prefill the email so it's one less thing to retype.
+    const pendingEmail = sessionStorage.getItem('sw_pending_email');
+    if (pendingEmail) {
+      document.getElementById('sigEmail').value = pendingEmail;
+      sessionStorage.removeItem('sw_pending_email');
+    }
 
     // Enable submit button only when checkbox is ticked
     const acknowledgeCheck = document.getElementById('acknowledgeCheck');
