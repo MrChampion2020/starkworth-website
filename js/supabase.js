@@ -85,6 +85,17 @@ async function fetchWorkerByEmail(email) {
   return rows[0] || null;
 }
 
+// Fetch a single Account Owner's own signed agreement by email (Account
+// Owner dashboard — needs the logged-in owner's own token, per the
+// "account owners can read own agreement" policy)
+async function fetchAgreementByEmail(email) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/agreements?email=eq.${encodeURIComponent(email)}&order=signed_at.desc&limit=1`, {
+    headers: getAuthHeaders()
+  });
+  const rows = await response.json();
+  return rows[0] || null;
+}
+
 // Fetch all contacts (admin only — now uses real admin token)
 async function fetchContacts() {
   const response = await fetch(`${SUPABASE_URL}/rest/v1/contacts?order=submitted_at.desc`, {

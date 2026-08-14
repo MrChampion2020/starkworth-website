@@ -14,6 +14,8 @@
 --   3. Restricts SELECT/UPDATE/DELETE to signed-in admin accounts you list below.
 --   4. Lets a signed-in Annotator read (only) their own worker row, for
 --      pages/worker-dashboard.html.
+--   5. Lets a signed-in Account Owner read (only) their own agreement row,
+--      for pages/client-dashboard.html.
 
 alter table public.agreements enable row level security;
 alter table public.workers enable row level security;
@@ -40,6 +42,9 @@ create policy "anon can submit agreements" on public.agreements
 
 create policy "admins can read agreements" on public.agreements
   for select to authenticated using (public.is_starkworth_admin());
+
+create policy "account owners can read own agreement" on public.agreements
+  for select to authenticated using (auth.jwt() ->> 'email' = email);
 
 create policy "admins can update agreements" on public.agreements
   for update to authenticated using (public.is_starkworth_admin());
