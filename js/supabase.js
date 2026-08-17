@@ -104,6 +104,49 @@ async function fetchContacts() {
   return response.json();
 }
 
+// ===== Mena Live Chat (admin only) =====
+// Guests never read/write this table directly (see
+// supabase/mena_chat_schema.sql for why) — only authenticated admins,
+// through the same is_starkworth_admin() RLS pattern used everywhere else
+// in this file.
+
+async function fetchMenaChats() {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/mena_chats?order=updated_at.desc`, {
+    headers: getAuthHeaders()
+  });
+  return response.json();
+}
+
+async function markMenaChatReadByAdmin(id) {
+  await fetch(`${SUPABASE_URL}/rest/v1/mena_chats?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: { ...getAuthHeaders(), 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ unread_by_admin: false })
+  });
+}
+
+// Appends an admin message to the transcript and flags the chat unread
+// for the visitor. `currentMessages` is the chat's existing `messages`
+// array (pass what fetchMenaChats() returned for that row) so we append
+// rather than clobber.
+async function sendMenaAdminReply(id, currentMessages, text) {
+  const updatedMessages = [
+    ...(currentMessages || []),
+    { sender: 'admin', text, ts: new Date().toISOString() }
+  ];
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/mena_chats?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: { ...getAuthHeaders(), 'Prefer': 'return=minimal' },
+    body: JSON.stringify({
+      messages: updatedMessages,
+      status: 'admin_replied',
+      unread_by_user: true,
+      unread_by_admin: false
+    })
+  });
+  return response.ok;
+}
+
 // ===== Auth (Supabase GoTrue) =====
 
 async function signUpWithPassword(email, password) {

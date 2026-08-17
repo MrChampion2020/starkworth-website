@@ -1,4 +1,59 @@
 User-agent: *
 Allow: /
 
+# Everything on this site is public marketing/informational content —
+# nothing here is gated, so there's no reason to block any crawler,
+# including AI ones. These are listed explicitly (rather than relying
+# only on the wildcard above) so it's unambiguous that Starkworth wants
+# to be indexed and cited by AI answer engines and assistants, not just
+# traditional search.
+
+# OpenAI (ChatGPT search / browsing)
+User-agent: GPTBot
+Allow: /
+User-agent: OAI-SearchBot
+Allow: /
+User-agent: ChatGPT-User
+Allow: /
+
+# Anthropic (Claude)
+User-agent: ClaudeBot
+Allow: /
+User-agent: anthropic-ai
+Allow: /
+User-agent: Claude-User
+Allow: /
+User-agent: Claude-SearchBot
+Allow: /
+
+# Perplexity
+User-agent: PerplexityBot
+Allow: /
+User-agent: Perplexity-User
+Allow: /
+
+# Google (standard crawl + AI features/Gemini training)
+User-agent: Googlebot
+Allow: /
+User-agent: Google-Extended
+Allow: /
+
+# Microsoft Bing (also powers Copilot and DuckDuckGo/Yahoo results)
+User-agent: Bingbot
+Allow: /
+
+# Apple (Siri / Spotlight / Apple Intelligence)
+User-agent: Applebot
+Allow: /
+User-agent: Applebot-Extended
+Allow: /
+
+# Amazon (Alexa / Rufus)
+User-agent: Amazonbot
+Allow: /
+
+# Common Crawl (a major dataset many AI models and search tools train from)
+User-agent: CCBot
+Allow: /
+
 Sitemap: https://starkworth.org/sitemap.xml

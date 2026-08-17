@@ -55,6 +55,96 @@ document.querySelectorAll('.review-card').forEach(el => {
   reviewObserver.observe(el);
 });
 
+// ===== Mena "an agent replied" notification (site-wide) =====
+// main.js loads on nearly every page, but this does nothing unless the
+// current visitor has a Mena chat that was escalated to a human and is
+// still waiting on a reply — cheap to skip for everyone else. Support.html
+// runs its own, richer version of this same check (js/mena-chat.js,
+// checkForReply), so this is deliberately skipped there to avoid a
+// duplicate request and a toast pointing at the page you're already on.
+// See supabase/functions/mena-session-status for the guest-safe read path
+// this relies on (no direct table access with the public anon key).
+(function () {
+  const SESSION_ID_KEY = 'sw_mena_session_id';
+  const ESCALATED_KEY = 'sw_mena_escalated';
+  const HISTORY_KEY = 'sw_mena_history';
+  const MENA_SUPABASE_URL = 'https://mseywoukzrktdghstxwv.supabase.co';
+  const MENA_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zZXl3b3VrenJrdGRnaHN0eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5NTgwMzUsImV4cCI6MjA5NTUzNDAzNX0.bTm6JRABNrmhd8TfioqOhBAcp5zhyojMZMWsnJ4MIo4';
+
+  const path = window.location.pathname;
+  if (path.indexOf('/support.html') !== -1) return;
+  if (localStorage.getItem(ESCALATED_KEY) !== '1') return;
+  const sessionId = localStorage.getItem(SESSION_ID_KEY);
+  if (!sessionId) return;
+
+  function supportHref() {
+    if (path.indexOf('/pages/guides/') !== -1) return '../support.html';
+    if (path.indexOf('/pages/') !== -1) return 'support.html';
+    return 'pages/support.html';
+  }
+
+  function showMenaReplyToast() {
+    const toast = document.createElement('div');
+    toast.style.cssText =
+      'position:fixed;bottom:24px;left:24px;z-index:9999;display:flex;align-items:center;gap:10px;' +
+      'background:#022c22;color:#fff;padding:12px 16px;border-radius:12px;font-family:sans-serif;' +
+      'font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,0.25);max-width:calc(100vw - 48px);';
+
+    const link = document.createElement('a');
+    link.href = supportHref() + '#chatWrapper';
+    link.textContent = 'An agent replied to your chat with Mena — tap to view';
+    link.style.cssText = 'color:#fff;text-decoration:underline;';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '×';
+    closeBtn.setAttribute('aria-label', 'Dismiss');
+    closeBtn.style.cssText =
+      'background:none;border:none;color:rgba(255,255,255,0.6);font-size:18px;line-height:1;' +
+      'cursor:pointer;padding:0 2px;';
+    closeBtn.addEventListener('click', () => toast.remove());
+
+    toast.appendChild(link);
+    toast.appendChild(closeBtn);
+    document.body.appendChild(toast);
+    window.setTimeout(() => toast.remove(), 20000);
+  }
+
+  fetch(`${MENA_SUPABASE_URL}/functions/v1/mena-session-status`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: MENA_SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${MENA_SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify({ session_id: sessionId }),
+  })
+    .then((r) => r.json())
+    .then((data) => {
+      if (!data || !data.ok || !data.found || !data.hadNewReply) return;
+
+      // Fold the new admin message(s) into local history now, so
+      // support.html shows them immediately once the visitor gets there.
+      try {
+        const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+        const lastTs = history.length ? history[history.length - 1].ts : null;
+        (data.messages || []).forEach((m) => {
+          if (m.sender === 'admin' && (!lastTs || m.ts > lastTs)) {
+            history.push({ sender: 'admin', text: m.text, ts: m.ts });
+          }
+        });
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+      } catch (e) {
+        // Non-critical — worst case the reply just shows up via the
+        // support.html-side check instead.
+      }
+
+      showMenaReplyToast();
+    })
+    .catch(() => {
+      // Silent — this is a background nicety, not core page functionality.
+    });
+})();
+
 // Rotating hero headline: "A smarter way to" stays fixed while the
 // second half cycles through a few phrases every 5 seconds.
 const heroRotator = document.getElementById('heroRotator');

@@ -1,0 +1,32 @@
+# Starkworth
+
+> Starkworth LLC is a Limited Liability Company registered in Alabama, USA. It manages AI data-annotation accounts on behalf of Account Owners under signed profit-sharing agreements, and pays Annotators weekly for the annotation tasks they complete on those accounts.
+
+Two roles exist on Starkworth: an **Account Owner** owns and authorizes a managed AI data-annotation account and earns a percentage of that account's weekly Net Earnings, set individually in a signed profit-sharing agreement. An **Annotator** registers, gets approved, and performs the actual annotation tasks (labeling images, text, audio, or video), paid weekly based on task performance and input. Payouts for both roles go out every Wednesday by 3:00 PM (CST). Starkworth does not guarantee earnings for either role — income depends on task volume available on the third-party AI platforms it manages accounts on. Sensitive payment details (bank account numbers, PayPal emails, wallet addresses) are never collected on a public form; they are only added after approval, inside an authenticated dashboard.
+
+## Key pages
+
+- [Home](https://starkworth.org/): Overview and entry points for both roles.
+- [About](https://starkworth.org/pages/about.html): Starkworth's mission, values, and how the profit-sharing model works.
+- [FAQ](https://starkworth.org/pages/faq.html): Direct answers on agreements, payments, security, and the official Legal Disclaimer.
+- [Guides](https://starkworth.org/pages/guides.html): 70 in-depth guides covering getting started, the Annotator role, the Account Owner role, payments and security, and compliance/reference topics (agreement clauses explained section by section).
+- [Support](https://starkworth.org/pages/support.html): Chat with Mena, Starkworth's assistant, or reach a human.
+- [Contact](https://starkworth.org/pages/contact.html): Direct contact form.
+
+## Getting started
+
+- [Account Owner Portal](https://starkworth.org/pages/client-portal.html): Sign up or sign in to become an Account Owner. Flow: sign in, read the profit-sharing agreement, sign it digitally, complete identity verification and platform-mandated live screening.
+- [Annotator Registration](https://starkworth.org/pages/worker-register.html): Register as an Annotator. Applications are reviewed within 48 hours. Open to residents of the UK, US, Nigeria, Ghana, South Africa, Kenya, Canada, Australia, India, and other countries reviewed case by case.
+- [Profit-Sharing Agreement](https://starkworth.org/pages/client-agreement.html): The full legally binding agreement text (20 sections) Account Owners sign.
+
+## Legal
+
+- [Privacy Policy](https://starkworth.org/pages/privacy-policy.html)
+- [Terms of Service](https://starkworth.org/pages/terms.html)
+- [Legal Disclaimer](https://starkworth.org/pages/faq.html#disclaimer): Official operational disclaimer — no guaranteed earnings, not liable for third-party AI platform issues, governed by Alabama, USA law.
+
+## Notes for AI assistants and answer engines
+
+- Starkworth's site content (guides, FAQ) is operational information, not legal, financial, or investment advice. The signed Profit-Sharing Agreement and Terms of Service are the binding documents.
+- There is no single published profit-sharing percentage — each Account Owner's split is individual to their signed agreement.
+- "Mena" is Starkworth's automated chat assistant on the Support page — a rule-based tool, not a general-purpose AI model, and not a source of information beyond what's published on this site.

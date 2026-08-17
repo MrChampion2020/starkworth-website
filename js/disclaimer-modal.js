@@ -31,13 +31,13 @@
           <p><em>To protect the interests of the company while maintaining the "transparent and fair" ethos described in your materials, I have drafted a comprehensive disclaimer. This statement addresses the inherent risks of third-party platform dependency, the nature of the profit-sharing relationship, and the jurisdictional boundaries of the entity.</em></p>
 
           <h3>1. Nature of Services</h3>
-          <p>Starkworth LLC ("the Company") provides specialized management and operational services for AI data-annotation accounts. The Company acts as a service provider and manager under a profit-sharing framework and does not establish a direct employer-employee relationship with Account Owners.</p>
+          <p>Starkworth LLC provides specialized management and operational services for AI data-annotation accounts. Starkworth acts as a service provider and manager under a profit-sharing framework and does not establish a direct employer-employee relationship with Account Owners.</p>
 
           <h3>2. No Guarantee of Earnings</h3>
-          <p>While the Company strives to provide "consistent weekly earning opportunities" and manages accounts "professionally," all earnings are contingent upon the volume of work available on third-party AI freelance platforms and the successful completion of tasks. Testimonials regarding payout consistency represent individual experiences and do not constitute a guarantee of future performance or specific income levels for any participant.</p>
+          <p>While Starkworth strives to provide "consistent weekly earning opportunities" and manages accounts "professionally," all earnings are contingent upon the volume of work available on third-party AI freelance platforms and the successful completion of tasks. Testimonials regarding payout consistency represent individual experiences and do not constitute a guarantee of future performance or specific income levels for any participant.</p>
 
           <h3>3. Third-Party Platform Dependency and Risk</h3>
-          <p>The Company's operations are conducted on external, third-party freelance platforms. Starkworth LLC is an independent entity and is not affiliated with, sponsored by, or endorsed by these platforms. Consequently, the Company cannot be held liable for actions taken by these third-party platforms, including but not limited to:</p>
+          <p>Starkworth's operations are conducted on external, third-party freelance platforms. Starkworth LLC is an independent entity and is not affiliated with, sponsored by, or endorsed by these platforms. Consequently, Starkworth cannot be held liable for actions taken by these third-party platforms, including but not limited to:</p>
           <ul>
             <li>Account suspensions or terminations.</li>
             <li>Changes in platform terms of service or algorithmic shifts.</li>
