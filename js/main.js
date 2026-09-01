@@ -15,7 +15,7 @@ const mobileMenu = document.getElementById('mobileMenu');
   mobilePortalLinks.forEach((portalLink) => portalLink.remove());
   const wrapper = document.createElement('div');
   wrapper.className = 'profile-nav';
-  wrapper.innerHTML = `<button class="profile-nav-trigger" type="button" aria-expanded="false" aria-controls="profilePortalMenu" aria-label="Open portal menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></button><div class="profile-portal-menu" id="profilePortalMenu" hidden><span class="profile-menu-title">Choose a portal</span><a href="${pageRoot}client-portal.html">Account Owner</a><a href="${pageRoot}worker-login.html">Worker</a><a href="${pageRoot}affiliate.html">Affiliate</a></div>`;
+  wrapper.innerHTML = `<button class="profile-nav-trigger" type="button" aria-expanded="false" aria-controls="profilePortalMenu" aria-label="Open login menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg><span>Login</span></button><div class="profile-portal-menu" id="profilePortalMenu" hidden><span class="profile-menu-title">Choose a portal</span><a href="${pageRoot}client-portal.html">Account Owner</a><a href="${pageRoot}worker-login.html">Worker</a><a href="${pageRoot}affiliate.html">Affiliate</a></div>`;
   navContainer.appendChild(wrapper);
   const trigger = wrapper.querySelector('.profile-nav-trigger');
   const menu = wrapper.querySelector('.profile-portal-menu');
