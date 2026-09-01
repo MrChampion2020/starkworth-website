@@ -499,6 +499,8 @@
   <script src="../js/main.js"></script>
   <script src="../js/disclaimer-modal.js"></script>
   <script>
+    storeReferralCodeFromUrl();
+
     // Set today's date
     const today = new Date();
     const dateStr = today.toLocaleDateString('en-GB', {
@@ -584,11 +586,12 @@
   const accountType = document.getElementById('accountType').value;
   const outlierUsername = document.getElementById('outlierUsername').value;
   const paymentMethod = document.getElementById('paymentMethod').value;
-  const notes = document.getElementById('notes').value;
-  const notesWithAccountType = accountType ? `Account type: ${accountType}. ${notes}` : notes;
+    const notes = document.getElementById('notes').value;
+    const notesWithAccountType = accountType ? `Account type: ${accountType}. ${notes}` : notes;
+    const referralCode = getStoredReferralCode();
 
-  const submitBtn = document.getElementById('submitBtn');
-  submitBtn.disabled = true;
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
   const originalBtnText = submitBtn.textContent;
   submitBtn.textContent = 'Submitting...';
 
@@ -599,7 +602,9 @@
       phone: phone,
       outlier_username: outlierUsername,
       payment_method: paymentMethod,
-      notes: notesWithAccountType
+      notes: notesWithAccountType,
+      referral_code: null,
+      referred_by_code: referralCode || null
     });
 
     if (saved) {

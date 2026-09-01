@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Affiliate Portal - Starkworth</title>
+  <meta name="description" content="Access your Starkworth affiliate tools, referral links, and earnings dashboards." />
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="../favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="16x16" href="../assets/icons/icon-16.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/icon-32.png" />
+  <link rel="icon" type="image/png" sizes="48x48" href="../assets/icons/icon-48.png" />
+  <link rel="apple-touch-icon" href="../assets/icons/apple-touch-icon.png" />
+  <link rel="manifest" href="../site.webmanifest" />
+  <meta name="theme-color" content="#022c22" />
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/pages.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+</head>
+<body>
+  <nav class="navbar" aria-label="Main navigation">
+    <div class="nav-container">
+      <a href="../index.html" class="logo"><img src="../assets/logo.png" alt="Starkworth" width="100" height="100" style="height:100px;width:auto;"></a>
+      <ul class="nav-links">
+        <li><a href="../index.html">Home</a></li>
+        <li><a href="about.html">About</a></li>
+        <li><a href="contact.html">Contact</a></li>
+        <li><a href="support.html">Support</a></li>
+      </ul>
+      <div class="nav-buttons">
+        <a href="affiliate.html" class="btn btn-outline">Affiliate Login</a>
+        <a href="affiliate.html#register" class="btn btn-primary">Create Affiliate Account</a>
+      </div>
+      <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu"><span></span><span></span><span></span></button>
+    </div>
+    <div class="mobile-menu" id="mobileMenu">
+      <a href="../index.html">Home</a>
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+      <a href="support.html">Support</a>
+      <a href="affiliate.html" class="active" aria-current="page">Affiliate Portal</a>
+    </div>
+  </nav>
+
+  <section class="page-header">
+    <h1>Affiliate Portal</h1>
+    <p>Login to your affiliate tools or create a new account path for referral tracking.</p>
+  </section>
+
+  <section class="portal-section">
+    <div class="portal-wrapper" style="grid-template-columns: 1fr;">
+      <div class="portal-login-box" style="max-width: 900px; margin: 0 auto;">
+        <div class="portal-box-header">
+          <div class="portal-box-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h18M3 12h18M3 17h18"/><circle cx="7" cy="7" r="1"/><circle cx="7" cy="12" r="1"/><circle cx="7" cy="17" r="1"/></svg></div>
+          <h2>Your affiliate tools</h2>
+          <p>Every approved worker and account owner gets a referral code. Use the buttons below to login or begin a new affiliate-aware signup flow.</p>
+        </div>
+
+        <div class="affiliate-tab-panels" style="margin-top: 8px;">
+          <div class="support-hub-card affiliate-tab-panel active" id="affiliateLoginPanel">
+            <div class="support-hub-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:22px;height:22px;"><path d="M4 14a8 8 0 0 1 16 0"/><rect x="2" y="14" width="20" height="3" rx="1"/><path d="M12 6v4"/></svg></div>
+            <h3>Affiliate login</h3>
+            <p>Sign in to the dedicated affiliate portal to view referral links, earnings, and task history.</p>
+            <a class="affiliate-rules-link" href="#rules" data-panel="affiliateRulesPanel">View affiliate referral rules</a>
+            <form id="affiliateLoginForm" class="affiliate-form" style="margin-top:16px;text-align:left;">
+              <label for="affiliateLoginEmail">Email</label>
+              <input id="affiliateLoginEmail" type="email" required autocomplete="email" placeholder="you@example.com" />
+              <label for="affiliateLoginPassword" style="display:block;margin-top:12px;">Password</label>
+              <input id="affiliateLoginPassword" type="password" required minlength="6" autocomplete="current-password" placeholder="Your password" />
+              <button class="btn btn-primary btn-block" type="submit" id="affiliateLoginBtn" style="margin-top:16px;">Sign In as Affiliate</button>
+              <p id="affiliateLoginStatus" role="alert" style="margin:12px 0 0;font-size:13px;"></p>
+              <p class="affiliate-switch-link">Don't have an account yet? <a href="#register" data-panel="affiliateSignupPanel">Create an affiliate account here</a></p>
+            </form>
+          </div>
+          <div class="support-hub-card affiliate-tab-panel" id="affiliateSignupPanel" hidden>
+            <div class="support-hub-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:22px;height:22px;"><path d="M12 5v14M5 12h14"/><rect x="4" y="4" width="16" height="16" rx="3"/></svg></div>
+            <h3>Create affiliate account</h3>
+            <p>This creates an affiliate-only account. It does not create a worker or account-owner account.</p>
+            <a class="affiliate-rules-link" href="#rules" data-panel="affiliateRulesPanel">View affiliate referral rules</a>
+            <form id="affiliateSignupForm" class="affiliate-form" style="margin-top:16px;text-align:left;">
+              <label for="affiliateFullName">Full name</label>
+              <input id="affiliateFullName" type="text" required autocomplete="name" placeholder="Your full name" />
+              <label for="affiliateSignupEmail" style="display:block;margin-top:12px;">Email</label>
+              <input id="affiliateSignupEmail" type="email" required autocomplete="email" placeholder="you@example.com" />
+              <label for="affiliateSignupPassword" style="display:block;margin-top:12px;">Password</label>
+              <input id="affiliateSignupPassword" type="password" required minlength="6" autocomplete="new-password" placeholder="At least 6 characters" />
+              <label for="affiliateSignupConfirm" style="display:block;margin-top:12px;">Confirm password</label>
+              <input id="affiliateSignupConfirm" type="password" required minlength="6" autocomplete="new-password" placeholder="Repeat password" />
+              <button class="btn btn-primary btn-block" type="submit" id="affiliateSignupBtn" style="margin-top:16px;">Create Affiliate Account</button>
+              <p id="affiliateSignupStatus" role="alert" style="margin:12px 0 0;font-size:13px;"></p>
+              <p class="affiliate-switch-link">Already have an account? <a href="#login" data-panel="affiliateLoginPanel">Sign in here</a></p>
+            </form>
+          </div>
+          <div class="support-hub-card affiliate-tab-panel" id="affiliateRulesPanel" hidden>
+            <div class="support-hub-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:22px;height:22px;"><path d="M4 20h16"/><path d="M7 20V8l5-4 5 4v12"/></svg></div>
+            <h3>Referral rules</h3>
+            <p>Standard affiliate terms for every approved affiliate:</p>
+            <ul class="affiliate-rules-list">
+              <li>Earn a standard <strong>5% commission</strong> on the eligible weekly earnings of each successful direct referral.</li>
+              <li>A referral is eligible only after the referred person completes onboarding successfully.</li>
+              <li>The referred account must remain actively managed by Starkworth and continue earning from active tasks.</li>
+              <li>Commissions are calculated on verified eligible earnings, not on registrations alone.</li>
+              <li>Cancelled, suspended, inactive, or non-earning accounts do not generate commission for that period.</li>
+              <li>Commission, payout, and withdrawal records are shown in the affiliate dashboard and are subject to review.</li>
+            </ul>
+            <p class="affiliate-switch-link"><a href="#login" data-panel="affiliateLoginPanel">Back to affiliate login</a> or <a href="#register" data-panel="affiliateSignupPanel">create an account</a></p>
+            <a href="support.html">Read support -></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script src="../js/supabase.js"></script>
+  <script src="../js/main.js"></script>
+  <script>
+    storeReferralCodeFromUrl();
+
+    function selectAffiliatePanel(panelId) {
+      document.querySelectorAll('.affiliate-tab-panel').forEach((panel) => {
+        panel.hidden = panel.id !== panelId;
+        panel.classList.toggle('active', panel.id === panelId);
+      });
+    }
+
+    document.querySelectorAll('[data-panel]').forEach((link) => {
+      link.addEventListener('click', (event) => {
+        event.preventDefault();
+        selectAffiliatePanel(link.dataset.panel);
+        history.replaceState(null, '', link.getAttribute('href'));
+      });
+    });
+
+    if (window.location.hash === '#register') selectAffiliatePanel('affiliateSignupPanel');
+    if (window.location.hash === '#rules') selectAffiliatePanel('affiliateRulesPanel');
+
+    document.getElementById('affiliateLoginForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const email = document.getElementById('affiliateLoginEmail').value.trim().toLowerCase();
+      const password = document.getElementById('affiliateLoginPassword').value;
+      const button = document.getElementById('affiliateLoginBtn');
+      const status = document.getElementById('affiliateLoginStatus');
+      button.disabled = true;
+      status.textContent = 'Signing in...';
+      const result = await signInAffiliate(email, password);
+      if (result.ok) {
+        window.location.href = 'affiliate-dashboard.html';
+        return;
+      }
+      status.textContent = result.data?.error_description || result.data?.msg || 'Invalid affiliate email or password.';
+      button.disabled = false;
+    });
+
+    document.getElementById('affiliateSignupForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const name = document.getElementById('affiliateFullName').value.trim();
+      const email = document.getElementById('affiliateSignupEmail').value.trim().toLowerCase();
+      const password = document.getElementById('affiliateSignupPassword').value;
+      const confirm = document.getElementById('affiliateSignupConfirm').value;
+      const button = document.getElementById('affiliateSignupBtn');
+      const status = document.getElementById('affiliateSignupStatus');
+      if (password !== confirm) { status.textContent = 'Passwords do not match.'; return; }
+      button.disabled = true;
+      status.textContent = 'Creating affiliate account...';
+      const result = await signUpAffiliate(email, password, name, getStoredReferralCode());
+      if (result.ok) {
+        status.textContent = result.data.access_token ? 'Account created. Opening your affiliate dashboard...' : 'Account created. Check your email to confirm, then sign in here.';
+        if (result.data.access_token) window.location.href = 'affiliate-dashboard.html';
+        else button.disabled = false;
+        return;
+      }
+      status.textContent = result.data?.error_description || result.data?.msg || 'Could not create affiliate account.';
+      button.disabled = false;
+    });
+  </script>
+</body>
+</html>

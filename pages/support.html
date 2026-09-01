@@ -91,6 +91,18 @@
     <p>Browse quick answers, chat with Mena, or reach a real person.</p>
   </section>
 
+  <section class="support-hero">
+    <div class="support-hero-card">
+      <span class="section-label" style="color:rgba(255,255,255,0.72);">Top support</span>
+      <h2>Meet Mena first</h2>
+      <p>Open the assistant in a modal-style panel that stays centered on desktop and mobile, with a close icon whenever you want to step away.</p>
+      <div class="support-hero-actions">
+        <button type="button" class="btn btn-primary btn-large" onclick="openMenaModal()">Open Mena</button>
+        <a href="contact.html" class="btn btn-outline btn-large" style="color:#fff;border-color:rgba(255,255,255,0.28);">Contact support</a>
+      </div>
+    </div>
+  </section>
+
   <!-- SUPPORT HUB -->
   <section class="support-hub">
     <div class="section-container" style="max-width: 1000px;">
@@ -133,15 +145,18 @@
       <span class="section-label">Quick answers</span>
       <h2 style="font-family:var(--font-display);font-size:clamp(24px,3vw,32px);font-weight:800;color:var(--dark);margin-bottom:24px;letter-spacing:-0.5px;">Chat with Mena</h2>
 
-      <div class="chat-wrapper" id="chatWrapper">
+      <div class="chat-wrapper support-mena-modal" id="chatWrapper">
         <div class="chat-header">
           <div class="chat-bot-avatar">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M12 3v4"/><circle cx="9" cy="13" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="13" r="1.2" fill="currentColor" stroke="none"/></svg>
           </div>
           <div class="chat-header-text">
             <strong>Mena</strong>
-            <span><span class="chat-status-dot"></span>Automated · replies instantly</span>
+            <span><span class="chat-status-dot"></span>Automated Â· replies instantly</span>
           </div>
+          <button type="button" class="support-mena-close" aria-label="Close Mena" onclick="closeMenaModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>
+          </button>
         </div>
 
         <div style="display:flex; align-items:center; gap:10px; padding:10px 16px; border-bottom:1px solid var(--border); flex-wrap:wrap;">
@@ -238,6 +253,24 @@
   <script src="../js/main.js"></script>
   <script src="../js/chatbot.js"></script>
   <script>
+    function openMenaModal() {
+      const modal = document.getElementById('chatWrapper');
+      if (modal) modal.classList.remove('is-hidden');
+      document.body.classList.add('modal-open');
+    }
+
+    function closeMenaModal() {
+      const modal = document.getElementById('chatWrapper');
+      if (modal) modal.classList.add('is-hidden');
+      document.body.classList.remove('modal-open');
+    }
+
+    document.body.classList.add('modal-open');
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeMenaModal();
+    });
+
     const chatLog = document.getElementById('chatLog');
     const chatForm = document.getElementById('chatForm');
     const chatInput = document.getElementById('chatInput');

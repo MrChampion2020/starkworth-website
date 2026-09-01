@@ -2,6 +2,36 @@
 const hamburger = document.getElementById('hamburger');
 const mobileMenu = document.getElementById('mobileMenu');
 
+// Keep every public page on the same role-based portal navigation.
+(function addProfilePortalMenu() {
+  const navContainer = document.querySelector('.nav-container');
+  if (!navContainer || document.querySelector('.profile-nav')) return;
+  const pageRoot = window.location.pathname.includes('/pages/guides/')
+    ? '../'
+    : (window.location.pathname.includes('/pages/') ? '' : 'pages/');
+  const existingActions = navContainer.querySelector('.nav-buttons');
+  if (existingActions) existingActions.classList.add('profile-nav-replaced');
+  const mobilePortalLinks = document.querySelectorAll('.mobile-menu a[href*="client-portal"], .mobile-menu a[href*="worker-login"], .mobile-menu a[href*="worker-register"], .mobile-menu a[href*="affiliate"]');
+  mobilePortalLinks.forEach((portalLink) => portalLink.remove());
+  const wrapper = document.createElement('div');
+  wrapper.className = 'profile-nav';
+  wrapper.innerHTML = `<button class="profile-nav-trigger" type="button" aria-expanded="false" aria-controls="profilePortalMenu" aria-label="Open portal menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></button><div class="profile-portal-menu" id="profilePortalMenu" hidden><span class="profile-menu-title">Choose a portal</span><a href="${pageRoot}client-portal.html">Account Owner</a><a href="${pageRoot}worker-login.html">Worker</a><a href="${pageRoot}affiliate.html">Affiliate</a></div>`;
+  navContainer.appendChild(wrapper);
+  const trigger = wrapper.querySelector('.profile-nav-trigger');
+  const menu = wrapper.querySelector('.profile-portal-menu');
+  trigger.addEventListener('click', () => {
+    const open = trigger.getAttribute('aria-expanded') === 'true';
+    trigger.setAttribute('aria-expanded', String(!open));
+    menu.hidden = open;
+  });
+  document.addEventListener('click', (event) => {
+    if (!wrapper.contains(event.target)) {
+      trigger.setAttribute('aria-expanded', 'false');
+      menu.hidden = true;
+    }
+  });
+})();
+
 if (hamburger && mobileMenu) {
   hamburger.addEventListener('click', () => {
     const isOpen = mobileMenu.classList.toggle('open');

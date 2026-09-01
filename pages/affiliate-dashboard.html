@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Affiliate Dashboard - Starkworth</title>
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/pages.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+</head>
+<body>
+  <nav class="navbar"><div class="nav-container">
+    <a href="../index.html" class="logo"><img src="../assets/logo.png" alt="Starkworth" width="100" height="100" style="height:100px;width:auto;"></a>
+    <div class="nav-buttons"><a href="affiliate.html" class="btn btn-outline">Affiliate Portal</a><button class="btn btn-primary" type="button" onclick="signOut();location.href='affiliate.html';">Sign Out</button></div>
+  </div></nav>
+  <section class="page-header"><h1>Affiliate Dashboard</h1><p>Referral performance, earnings, payouts, withdrawals, and weekly activity.</p></section>
+  <main class="dashboard-section" style="padding:40px 24px 80px;"><div style="max-width:1180px;margin:0 auto;">
+    <div id="affiliateAuthError" class="error-state" style="display:none;"></div>
+    <div id="affiliateContent" style="display:none;">
+      <div class="dashboard-grid" style="margin-bottom:24px;">
+        <div class="dashboard-card"><span class="dashboard-card-label">Affiliate</span><strong id="affiliateName">-</strong><small id="affiliateEmail">-</small></div>
+        <div class="dashboard-card"><span class="dashboard-card-label">Referral earnings</span><strong id="affiliateEarnings">$0.00</strong><small>All recorded commissions</small></div>
+        <div class="dashboard-card"><span class="dashboard-card-label">Direct rate</span><strong id="affiliateRate">5%</strong><small>Admin-controlled default</small></div>
+        <div class="dashboard-card"><span class="dashboard-card-label">Second tree</span><strong id="affiliateSecondTree">Disabled</strong><small>Admin-controlled eligibility</small></div>
+      </div>
+      <section class="worker-form-box" style="margin-bottom:24px;"><h2>Your unique referral link</h2><p>Share this link to refer account owners or annotators. Their roles remain separate from your affiliate account.</p><div style="display:flex;gap:10px;flex-wrap:wrap;"><input id="affiliateReferralLink" readonly style="flex:1;min-width:240px;"><button class="btn btn-primary" type="button" onclick="copyAffiliateLink()">Copy Link</button></div><p id="copyStatus" style="font-size:13px;color:var(--text-muted);"></p></section>
+      <section class="worker-form-box" style="margin-bottom:24px;"><h2>Request withdrawal</h2><form id="withdrawalForm" style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;"><label>Amount USD<input id="withdrawalAmount" type="number" min="1" step="0.01" required></label><label>Destination<input id="withdrawalDestination" required placeholder="PayPal or wallet destination"></label><button class="btn btn-primary" type="submit">Request</button></form><p id="withdrawalStatus" style="font-size:13px;color:var(--text-muted);"></p></section>
+      <div class="worker-form-box"><h2>Affiliate history</h2><div class="table-scroll"><table class="admin-table"><thead><tr><th>Type</th><th>Date / Week</th><th>Amount</th><th>Status</th><th>Details</th></tr></thead><tbody id="affiliateHistory"></tbody></table></div></div>
+    </div>
+  </div></main>
+  <script src="../js/supabase.js"></script>
+  <script src="../js/main.js"></script>
+  <script>
+    let affiliateEmail = '';
+    function money(value) { return formatUsd(value); }
+    function safe(value) { const node = document.createElement('span'); node.textContent = value ?? ''; return node.innerHTML; }
+    async function loadAffiliateDashboard() {
+      const session = getSession();
+      if (!session.email || !session.accessToken) { location.href = 'affiliate.html'; return; }
+      affiliateEmail = session.email;
+      const profile = await fetchAffiliateAccount(affiliateEmail);
+      if (!profile || profile.status !== 'active') { signOut(); location.href = 'affiliate.html'; return; }
+      document.getElementById('affiliateContent').style.display = 'block';
+      document.getElementById('affiliateName').textContent = profile.full_name;
+      document.getElementById('affiliateEmail').textContent = profile.email;
+      document.getElementById('affiliateReferralLink').value = buildReferralLink('client-portal.html', profile.referral_code);
+      const [settings, commissions, payouts, withdrawals] = await Promise.all([
+        fetchAffiliateSettings(), fetchAffiliateCommissions(profile.email), fetchAffiliatePayouts(profile.email), fetchAffiliateWithdrawals(profile.email)
+      ]);
+      const total = commissions.reduce((sum, row) => sum + Number(row.commission_usd || 0), 0);
+      document.getElementById('affiliateEarnings').textContent = money(total);
+      document.getElementById('affiliateRate').textContent = `${settings?.default_direct_pct ?? 5}%`;
+      document.getElementById('affiliateSecondTree').textContent = settings?.second_tree_enabled ? `${settings.second_tree_pct || 0}% enabled` : 'Disabled';
+      const history = [
+        ...commissions.map(row => ({ type: `Commission T${row.tier}`, date: row.week_start, amount: row.commission_usd, status: 'earned', details: `${row.referred_email} at ${row.rate_pct}%` })),
+        ...payouts.map(row => ({ type: 'Payout', date: row.created_at, amount: row.amount_usd, status: row.status, details: row.payout_method || '-' })),
+        ...withdrawals.map(row => ({ type: 'Withdrawal', date: row.requested_at, amount: row.amount_usd, status: row.status, details: row.destination || '-' }))
+      ].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+      document.getElementById('affiliateHistory').innerHTML = history.length ? history.map(row => `<tr><td>${safe(row.type)}</td><td>${safe(row.date)}</td><td>${money(row.amount)}</td><td>${safe(row.status)}</td><td>${safe(row.details)}</td></tr>`).join('') : '<tr><td colspan="5">No affiliate history yet.</td></tr>';
+    }
+    async function copyAffiliateLink() { await navigator.clipboard.writeText(document.getElementById('affiliateReferralLink').value); document.getElementById('copyStatus').textContent = 'Referral link copied.'; }
+    document.getElementById('withdrawalForm').addEventListener('submit', async (event) => { event.preventDefault(); const ok = await requestAffiliateWithdrawal(affiliateEmail, document.getElementById('withdrawalAmount').value, document.getElementById('withdrawalDestination').value.trim()); document.getElementById('withdrawalStatus').textContent = ok ? 'Withdrawal request submitted.' : 'Could not submit withdrawal request.'; if (ok) event.target.reset(); });
+    loadAffiliateDashboard().catch(() => { document.getElementById('affiliateAuthError').textContent = 'Unable to load your affiliate dashboard.'; document.getElementById('affiliateAuthError').style.display = 'block'; });
+  </script>
+</body>
+</html>

@@ -162,8 +162,8 @@
           </select>
         </div>
         <div class="form-group">
-          <label>Current average weekly earnings from account ($)</label>
-          <input type="text" id="weeklyEarnings" placeholder="e.g. $50 - $100" />
+          <label>Current average weekly value in USD ($)</label>
+          <input type="number" id="weeklyValueUsd" placeholder="0.00" min="0" step="0.01" />
         </div>
 
         <!-- PAYMENT DETAILS -->
@@ -312,6 +312,8 @@
   <script src="../js/main.js"></script>
   <script src="../js/disclaimer-modal.js"></script>
   <script>
+  storeReferralCodeFromUrl();
+
   async function submitRegistration() {
   const firstName = document.getElementById('firstName').value;
   const lastName = document.getElementById('lastName').value;
@@ -321,7 +323,7 @@
   const passwordConfirm = document.getElementById('workerPasswordConfirm').value;
   const country = document.getElementById('country').value;
   const accountAge = document.getElementById('accountAge').value;
-  const weeklyEarnings = document.getElementById('weeklyEarnings').value;
+  const weeklyValueUsd = document.getElementById('weeklyValueUsd').value;
   const payMethod = document.getElementById('payMethod').value;
   const ack = document.getElementById('workerAck').checked;
 
@@ -364,8 +366,11 @@
       outlier_username: 'N/A',
       outlier_email: email,
       account_age: accountAge,
-      weekly_earnings: weeklyEarnings,
-      payment_method: payMethod
+      weekly_earnings: weeklyValueUsd ? `$${weeklyValueUsd}` : '',
+      weekly_value_usd: weeklyValueUsd || null,
+      payment_method: payMethod,
+      referral_code: null,
+      referred_by_code: getStoredReferralCode() || null
     });
 
     if (saved) {

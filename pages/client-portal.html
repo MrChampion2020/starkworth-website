@@ -260,6 +260,8 @@
   <script src="../js/supabase.js"></script>
   <script src="../js/main.js"></script>
   <script>
+    storeReferralCodeFromUrl();
+
     function switchAuthTab(tab) {
       const isLogin = tab === 'login';
       document.getElementById('loginPanel').style.display = isLogin ? 'block' : 'none';
@@ -348,6 +350,8 @@
         const { ok, data } = await signUpWithPassword(email, password);
 
         if (ok) {
+          const referralCode = getStoredReferralCode();
+          if (referralCode) sessionStorage.setItem('sw_referral_code', referralCode);
           sessionStorage.setItem('sw_pending_email', email);
           window.location.href = 'client-agreement.html';
         } else {

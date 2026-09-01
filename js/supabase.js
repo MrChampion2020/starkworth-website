@@ -2,6 +2,41 @@
 const SUPABASE_URL = 'https://mseywoukzrktdghstxwv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zZXl3b3VrenJrdGRnaHN0eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5NTgwMzUsImV4cCI6MjA5NTUzNDAzNX0.bTm6JRABNrmhd8TfioqOhBAcp5zhyojMZMWsnJ4MIo4';
 
+function formatUsd(value) {
+  const amount = Number(value || 0);
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+}
+
+function escapeQuery(value) {
+  return encodeURIComponent(value || '');
+}
+
+function getStoredReferralCode() {
+  return sessionStorage.getItem('sw_referral_code') || localStorage.getItem('sw_referral_code') || '';
+}
+
+function storeReferralCodeFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const code = (params.get('ref') || params.get('referral') || '').trim();
+  if (code) {
+    sessionStorage.setItem('sw_referral_code', code);
+    localStorage.setItem('sw_referral_code', code);
+  }
+  return code || getStoredReferralCode();
+}
+
+function buildReferralLink(pagePath, referralCode) {
+  const code = (referralCode || getStoredReferralCode() || '').trim();
+  const base = window.location.origin + '/pages/' + pagePath.replace(/^\/+/, '');
+  return code ? `${base}${base.includes('?') ? '&' : '?'}ref=${encodeURIComponent(code)}` : base;
+}
+
+async function fetchTableRows(table, query = '', headers = getAuthHeaders()) {
+  const url = `${SUPABASE_URL}/rest/v1/${table}${query ? `?${query}` : ''}`;
+  const response = await fetch(url, { headers });
+  return response.json();
+}
+
 // Returns the real logged-in admin's token if one exists, otherwise falls
 // back to the public anon key. Use this for any request that should be
 // restricted to a signed-in admin (reading/updating/deleting records).
@@ -39,6 +74,66 @@ async function saveWorker(data) {
       'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       'Prefer': 'return=minimal'
     },
+    body: JSON.stringify(data)
+  });
+  return response.ok;
+}
+
+async function saveAffiliateSettings(data) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_settings?id=eq.1`, {
+    method: 'PATCH',
+    headers: { ...getAuthHeaders(), 'Prefer': 'return=representation' },
+    body: JSON.stringify(data)
+  });
+  return response.ok;
+}
+
+async function fetchAffiliateSettings() {
+  const rows = await fetchTableRows('affiliate_settings', 'id=eq.1&limit=1');
+  return rows[0] || null;
+}
+
+async function fetchAffiliateEarnings(email) {
+  const query = email ? `email=eq.${escapeQuery(email)}&order=week_start.desc,created_at.desc` : 'order=week_start.desc,created_at.desc';
+  return fetchTableRows('affiliate_earnings', query);
+}
+
+async function fetchAffiliatePayouts(email) {
+  const query = email ? `email=eq.${escapeQuery(email)}&order=created_at.desc` : 'order=created_at.desc';
+  return fetchTableRows('affiliate_payouts', query);
+}
+
+async function fetchAffiliateWithdrawals(email) {
+  const query = email ? `email=eq.${escapeQuery(email)}&order=requested_at.desc` : 'order=requested_at.desc';
+  return fetchTableRows('affiliate_withdrawals', query);
+}
+
+async function fetchAffiliateCommissions(email) {
+  const query = email ? `referrer_email=eq.${escapeQuery(email)}&order=created_at.desc` : 'order=created_at.desc';
+  return fetchTableRows('affiliate_commissions', query);
+}
+
+async function fetchWeeklyTaskAssignments(email) {
+  const query = email ? `email=eq.${escapeQuery(email)}&order=week_start.desc,created_at.desc` : 'order=week_start.desc,created_at.desc';
+  return fetchTableRows('weekly_task_assignments', query);
+}
+
+async function fetchAffiliateReferrerRule(email, portalType) {
+  const query = email
+    ? `referrer_email=eq.${escapeQuery(email)}${portalType ? `&referrer_portal_type=eq.${escapeQuery(portalType)}` : ''}&limit=1`
+    : 'limit=1';
+  const rows = await fetchTableRows('affiliate_referrer_rules', query);
+  return rows[0] || null;
+}
+
+async function fetchAffiliateReferrerRulesAll() {
+  return fetchTableRows('affiliate_referrer_rules', 'order=updated_at.desc');
+}
+
+async function saveAffiliateReferrerRule(data) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_referrer_rules`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Prefer': 'return=representation' },
     body: JSON.stringify(data)
   });
   return response.ok;
@@ -104,6 +199,26 @@ async function fetchContacts() {
   return response.json();
 }
 
+async function fetchAffiliateEarningsAll() {
+  return fetchTableRows('affiliate_earnings', 'order=week_start.desc,created_at.desc');
+}
+
+async function fetchAffiliatePayoutsAll() {
+  return fetchTableRows('affiliate_payouts', 'order=created_at.desc');
+}
+
+async function fetchAffiliateWithdrawalsAll() {
+  return fetchTableRows('affiliate_withdrawals', 'order=requested_at.desc');
+}
+
+async function fetchAffiliateCommissionsAll() {
+  return fetchTableRows('affiliate_commissions', 'order=created_at.desc');
+}
+
+async function fetchWeeklyTaskAssignmentsAll() {
+  return fetchTableRows('weekly_task_assignments', 'order=week_start.desc,created_at.desc');
+}
+
 // ===== Mena Live Chat (admin only) =====
 // Guests never read/write this table directly (see
 // supabase/mena_chat_schema.sql for why) — only authenticated admins,
@@ -162,6 +277,20 @@ async function signUpWithPassword(email, password) {
   return { ok: response.ok, data };
 }
 
+async function signUpAffiliate(email, password, fullName, referredByCode = '') {
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
+    body: JSON.stringify({ email, password, data: { portal_type: 'affiliate', full_name: fullName, referred_by_code: referredByCode } })
+  });
+  const data = await response.json();
+  if (response.ok && data.access_token) {
+    sessionStorage.setItem('sw_access_token', data.access_token);
+    sessionStorage.setItem('sw_user_email', email);
+  }
+  return { ok: response.ok, data };
+}
+
 async function signInWithPassword(email, password) {
   const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
     method: 'POST',
@@ -177,6 +306,35 @@ async function signInWithPassword(email, password) {
     sessionStorage.setItem('sw_user_email', email);
   }
   return { ok: response.ok, data };
+}
+
+async function signInAffiliate(email, password) {
+  const result = await signInWithPassword(email, password);
+  if (!result.ok) return result;
+
+  const profile = await fetchAffiliateAccount(email);
+  if (!profile || profile.status !== 'active') {
+    signOut();
+    return { ok: false, data: { msg: 'This login is not registered as an active affiliate account.' } };
+  }
+  return { ok: true, data: { ...result.data, profile } };
+}
+
+async function fetchAffiliateAccount(email) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_accounts?email=eq.${encodeURIComponent(email)}&limit=1`, {
+    headers: getAuthHeaders()
+  });
+  const rows = await response.json();
+  return response.ok ? (rows[0] || null) : null;
+}
+
+async function requestAffiliateWithdrawal(email, amountUsd, destination) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_withdrawals`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ email, portal_type: 'affiliate', amount_usd: Number(amountUsd), destination, status: 'requested' })
+  });
+  return response.ok;
 }
 
 function getSession() {

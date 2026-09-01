@@ -52,7 +52,7 @@
 
   <section class="portal-section">
     <div class="portal-wrapper" style="grid-template-columns: 1fr;">
-      <div class="portal-login-box" id="dashboardContent" style="max-width: 760px; margin: 0 auto;">
+      <div class="portal-login-box" id="dashboardContent" style="max-width: 1180px; margin: 0 auto;">
         <div class="portal-box-header">
           <div class="portal-box-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14a8 8 0 0 1 16 0"/><rect x="2" y="14" width="20" height="3" rx="1"/><path d="M12 6v4"/></svg></div>
           <h2>Your profile</h2>
@@ -69,6 +69,104 @@
           <div class="notice notice-info" style="margin-top: 24px;">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>
             <span>Detailed earnings and payment history will appear here as your account activity is recorded. Weekly pay goes out every Wednesday by 3:00 PM (CST), based on task performance and input.</span>
+          </div>
+
+          <div id="affiliateArea" style="display:none;">
+            <div class="portal-summary-grid">
+              <div class="summary-card"><span>Weekly value (USD)</span><strong id="weeklyValueCard">$0.00</strong></div>
+              <div class="summary-card"><span>Direct referral rate</span><strong id="directRateCard">5%</strong></div>
+              <div class="summary-card"><span>2nd tree status</span><strong id="secondTreeCard">Disabled</strong></div>
+              <div class="summary-card"><span>Referral earnings</span><strong id="referralEarningsCard">$0.00</strong></div>
+            </div>
+
+            <div class="affiliate-link-box">
+              <h3>Your referral links</h3>
+              <p>Share these unique links to earn from direct referrals, and from second-tree referrals when admin settings allow it.</p>
+              <div style="margin-top:16px;">
+                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Annotator invite link</label>
+                <div class="affiliate-link-row">
+                  <input type="text" id="workerReferralLink" readonly />
+                  <button class="btn btn-primary" type="button" onclick="copyReferralLink('workerReferralLink', this)">Copy</button>
+                </div>
+              </div>
+              <div style="margin-top:14px;">
+                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Account owner invite link</label>
+                <div class="affiliate-link-row">
+                  <input type="text" id="ownerReferralLink" readonly />
+                  <button class="btn btn-outline" type="button" onclick="copyReferralLink('ownerReferralLink', this)">Copy</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="history-panel">
+              <h3>Weekly earning history</h3>
+              <table class="history-table">
+                <thead>
+                  <tr>
+                    <th>Week</th><th>USD</th><th>Task window</th><th>Daily slots</th><th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="workerEarningsBody">
+                  <tr><td colspan="5" class="history-empty">No earning history yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="history-panel">
+              <h3>Payout history</h3>
+              <table class="history-table">
+                <thead>
+                  <tr>
+                    <th>Week</th><th>Amount</th><th>Method</th><th>Status</th><th>Date</th>
+                  </tr>
+                </thead>
+                <tbody id="workerPayoutsBody">
+                  <tr><td colspan="5" class="history-empty">No payout history yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="history-panel">
+              <h3>Withdrawal history</h3>
+              <table class="history-table">
+                <thead>
+                  <tr>
+                    <th>Requested</th><th>Amount</th><th>Destination</th><th>Status</th><th>Processed</th>
+                  </tr>
+                </thead>
+                <tbody id="workerWithdrawalsBody">
+                  <tr><td colspan="5" class="history-empty">No withdrawal history yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="history-panel">
+              <h3>Affiliate earnings history</h3>
+              <table class="history-table">
+                <thead>
+                  <tr>
+                    <th>Referrer</th><th>Tier</th><th>Base USD</th><th>Commission</th><th>Week</th>
+                  </tr>
+                </thead>
+                <tbody id="workerCommissionsBody">
+                  <tr><td colspan="5" class="history-empty">No affiliate commissions yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="history-panel">
+              <h3>Task schedule</h3>
+              <table class="history-table">
+                <thead>
+                  <tr>
+                    <th>Task</th><th>Week</th><th>Start / End</th><th>Daily time slots</th><th>USD</th>
+                  </tr>
+                </thead>
+                <tbody id="workerTasksBody">
+                  <tr><td colspan="5" class="history-empty">No task schedules assigned yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div class="support-hub-grid" style="grid-template-columns:repeat(3,1fr); margin-top: 28px;">
@@ -147,6 +245,60 @@
       window.location.href = 'worker-login.html';
     }
 
+    function escapeHtml(value) {
+      const div = document.createElement('div');
+      div.textContent = value === null || value === undefined ? '' : String(value);
+      return div.innerHTML;
+    }
+
+    function formatDate(iso) {
+      if (!iso) return '-';
+      return new Date(iso).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    function formatMoney(value) {
+      return formatUsd(value);
+    }
+
+    function summarizeSlots(slots) {
+      if (!slots) return '-';
+      if (typeof slots === 'string') {
+        try { slots = JSON.parse(slots); } catch (_) { return slots; }
+      }
+      if (Array.isArray(slots)) {
+        return slots.map(slot => {
+          if (!slot) return '';
+          if (typeof slot === 'string') return slot;
+          const day = slot.day || slot.label || '';
+          const time = slot.time || slot.slot || slot.hours || '';
+          return [day, time].filter(Boolean).join(': ');
+        }).filter(Boolean).join(' | ') || '-';
+      }
+      if (typeof slots === 'object') {
+        return Object.entries(slots).map(([day, time]) => `${day}: ${time}`).join(' | ') || '-';
+      }
+      return String(slots);
+    }
+
+    function copyReferralLink(inputId, button) {
+      const input = document.getElementById(inputId);
+      if (!input || !input.value) return;
+      navigator.clipboard.writeText(input.value).then(() => {
+        const original = button.textContent;
+        button.textContent = 'Copied';
+        setTimeout(() => { button.textContent = original; }, 1200);
+      });
+    }
+
+    function renderRows(tbodyId, rows, emptyMessage, rowRenderer, colspan = 5) {
+      const tbody = document.getElementById(tbodyId);
+      if (!rows || !rows.length) {
+        tbody.innerHTML = `<tr><td colspan="${colspan}" class="history-empty">${emptyMessage}</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = rows.map(rowRenderer).join('');
+    }
+
     (async function init() {
       const session = getSession();
       if (!session.accessToken || !session.email) {
@@ -168,6 +320,74 @@
       document.getElementById('dCountry').textContent = worker.country || '-';
       document.getElementById('dPayMethod').textContent = worker.payment_method || '-';
       document.getElementById('dStatus').textContent = worker.approved ? 'Active' : 'Under Review';
+
+      const settings = await fetchAffiliateSettings();
+      const referrerRule = await fetchAffiliateReferrerRule(session.email, 'worker');
+      const earnings = await fetchAffiliateEarnings(session.email);
+      const payouts = await fetchAffiliatePayouts(session.email);
+      const withdrawals = await fetchAffiliateWithdrawals(session.email);
+      const commissions = await fetchAffiliateCommissions(session.email);
+      const tasks = await fetchWeeklyTaskAssignments(session.email);
+      const latestEarning = earnings[0] || {};
+      const totalReferralEarnings = commissions.reduce((sum, row) => sum + Number(row.commission_usd || 0), 0);
+
+      document.getElementById('affiliateArea').style.display = 'block';
+      document.getElementById('weeklyValueCard').textContent = formatMoney(latestEarning.weekly_value_usd || worker.weekly_value_usd || 0);
+      document.getElementById('directRateCard').textContent = `${Number(settings?.default_direct_pct || 5)}%`;
+      document.getElementById('secondTreeCard').textContent = referrerRule
+        ? (referrerRule.second_tree_enabled ? `${Number(referrerRule.second_tree_pct || 0)}% enabled` : 'Disabled')
+        : (settings?.second_tree_enabled ? `${Number(settings.second_tree_pct || 0)}% enabled` : 'Disabled');
+      document.getElementById('referralEarningsCard').textContent = formatMoney(totalReferralEarnings);
+
+      const workerReferralCode = worker.referral_code || '';
+      document.getElementById('workerReferralLink').value = buildReferralLink('worker-register.html', workerReferralCode);
+      document.getElementById('ownerReferralLink').value = buildReferralLink('client-portal.html', workerReferralCode);
+
+      renderRows('workerEarningsBody', earnings, 'No earning history yet.', row => `
+        <tr>
+          <td>${escapeHtml(formatDate(row.week_start))} - ${escapeHtml(formatDate(row.week_end))}</td>
+          <td>${escapeHtml(formatMoney(row.weekly_value_usd))}</td>
+          <td>${escapeHtml(formatDate(row.task_start_date))} - ${escapeHtml(formatDate(row.task_end_date))}</td>
+          <td>${escapeHtml(summarizeSlots(row.daily_time_slots))}</td>
+          <td><span class="history-chip">${escapeHtml(row.status || 'pending')}</span></td>
+        </tr>`);
+
+      renderRows('workerPayoutsBody', payouts, 'No payout history yet.', row => `
+        <tr>
+          <td>${escapeHtml(formatDate(row.week_start))} - ${escapeHtml(formatDate(row.week_end))}</td>
+          <td>${escapeHtml(formatMoney(row.amount_usd))}</td>
+          <td>${escapeHtml(row.payout_method || '-')}</td>
+          <td><span class="history-chip">${escapeHtml(row.status || 'pending')}</span></td>
+          <td>${escapeHtml(formatDate(row.paid_at || row.created_at))}</td>
+        </tr>`);
+
+      renderRows('workerWithdrawalsBody', withdrawals, 'No withdrawal history yet.', row => `
+        <tr>
+          <td>${escapeHtml(formatDate(row.requested_at))}</td>
+          <td>${escapeHtml(formatMoney(row.amount_usd))}</td>
+          <td>${escapeHtml(row.destination || '-')}</td>
+          <td><span class="history-chip">${escapeHtml(row.status || 'requested')}</span></td>
+          <td>${escapeHtml(formatDate(row.processed_at))}</td>
+        </tr>`);
+
+      renderRows('workerCommissionsBody', commissions, 'No affiliate commissions yet.', row => `
+        <tr>
+          <td>${escapeHtml(row.referred_email)}<br><small style="color:var(--text-muted);">${escapeHtml(row.referred_portal_type)}</small></td>
+          <td>${escapeHtml(String(row.tier))}${row.second_tree_enabled ? ' (2nd tree)' : ''}</td>
+          <td>${escapeHtml(formatMoney(row.base_amount_usd))}</td>
+          <td>${escapeHtml(formatMoney(row.commission_usd))}</td>
+          <td>${escapeHtml(formatDate(row.week_start))} - ${escapeHtml(formatDate(row.week_end))}</td>
+        </tr>`);
+
+      renderRows('workerTasksBody', tasks, 'No task schedules assigned yet.', row => `
+        <tr>
+          <td>${escapeHtml(row.task_name)}</td>
+          <td>${escapeHtml(formatDate(row.week_start))} - ${escapeHtml(formatDate(row.week_end))}</td>
+          <td>${escapeHtml(formatDate(row.task_start_date))} - ${escapeHtml(formatDate(row.task_end_date))}</td>
+          <td>${escapeHtml(summarizeSlots(row.daily_time_slots))}</td>
+          <td>${escapeHtml(formatMoney(row.weekly_value_usd))}</td>
+        </tr>`);
+
       document.getElementById('dashboardBody').style.display = 'block';
     })();
   </script>

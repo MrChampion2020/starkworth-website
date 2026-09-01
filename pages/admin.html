@@ -73,6 +73,13 @@
       width: 100%;
       box-sizing: border-box;
     }
+    .admin-profile-nav { position:relative; margin-left:auto; }
+    .admin-profile-trigger { width:40px; height:40px; display:grid; place-items:center; border:1px solid rgba(255,255,255,.35); border-radius:50%; background:rgba(255,255,255,.08); color:#fff; cursor:pointer; }
+    .admin-profile-trigger svg { width:21px; height:21px; }
+    .admin-profile-menu { position:absolute; right:0; top:calc(100% + 10px); width:200px; padding:8px; background:#fff; border-radius:12px; box-shadow:0 12px 36px rgba(0,0,0,.2); z-index:20; }
+    .admin-profile-menu[hidden] { display:none; }
+    .admin-profile-menu a, .admin-profile-menu button { display:block; width:100%; padding:10px; border:0; border-radius:7px; background:none; color:#022c22; text-align:left; font:600 13px var(--font-body); cursor:pointer; }
+    .admin-profile-menu a:hover, .admin-profile-menu button:hover { background:#d1fae5; }
   </style>
 </head>
 <body class="admin-body">
@@ -115,10 +122,14 @@
           <button class="admin-tab-btn active" onclick="showTab('overview', this)">Overview</button>
           <button class="admin-tab-btn" onclick="showTab('agreements', this)">Agreements</button>
           <button class="admin-tab-btn" onclick="showTab('workers', this)">Annotators</button>
+          <button class="admin-tab-btn" onclick="showTab('affiliate', this)">Affiliate</button>
           <button class="admin-tab-btn" onclick="showTab('contacts', this)">Contacts</button>
           <button class="admin-tab-btn" onclick="showTab('livechat', this)">Live Chat <span id="liveChatBadge" style="display:none;background:#dc2626;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:4px;">0</span></button>
         </div>
-        <button onclick="adminLogout()" class="btn btn-outline" style="font-size:13px; padding: 6px 14px; margin-left:auto; color:rgba(255,255,255,0.6); border-color:rgba(255,255,255,0.2);">Logout</button>
+        <div class="admin-profile-nav">
+          <button class="admin-profile-trigger" type="button" aria-expanded="false" aria-controls="adminProfileMenu" aria-label="Open portal menu" onclick="toggleAdminProfileMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></button>
+          <div class="admin-profile-menu" id="adminProfileMenu" hidden><a href="../index.html">Website</a><a href="client-portal.html">Account Owner Portal</a><a href="worker-login.html">Worker Portal</a><a href="affiliate.html">Affiliate Portal</a><button type="button" onclick="adminLogout()">Sign out</button></div>
+        </div>
         <button class="admin-hamburger" id="adminHamburger" aria-label="Open menu" onclick="toggleAdminMenu()">
           <span></span><span></span><span></span>
         </button>
@@ -127,6 +138,7 @@
         <button class="admin-mobile-tab-btn active" onclick="showTab('overview', this); closeAdminMenu();">Overview</button>
         <button class="admin-mobile-tab-btn" onclick="showTab('agreements', this); closeAdminMenu();">Agreements</button>
         <button class="admin-mobile-tab-btn" onclick="showTab('workers', this); closeAdminMenu();">Annotators</button>
+        <button class="admin-mobile-tab-btn" onclick="showTab('affiliate', this); closeAdminMenu();">Affiliate</button>
         <button class="admin-mobile-tab-btn" onclick="showTab('contacts', this); closeAdminMenu();">Contacts</button>
         <button class="admin-mobile-tab-btn" onclick="showTab('livechat', this); closeAdminMenu();">Live Chat</button>
       </div>
@@ -240,6 +252,260 @@
       </div>
     </div>
 
+    <!-- AFFILIATE TAB -->
+    <div id="tab-affiliate" class="admin-tab-content admin-container" style="display:none;">
+      <div class="admin-page-title">
+        <h1>Affiliate System</h1>
+        <p>Control referral rates, enable the second tree, and review affiliate activity, weekly value, payouts, withdrawals, and task schedules.</p>
+      </div>
+
+      <div class="settings-panel">
+        <h3>Affiliate settings</h3>
+        <p>Use these controls to set the default referral percentage and decide whether second-tree referrals can earn, with a separate percentage for that tier.</p>
+        <div class="settings-grid">
+          <div class="form-group">
+            <label>Default direct referral %</label>
+            <input type="number" id="affiliateDirectPct" min="0" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label>Second tree enabled</label>
+            <select id="affiliateSecondTreeEnabled">
+              <option value="false">Disabled</option>
+              <option value="true">Enabled</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Second tree referral %</label>
+            <input type="number" id="affiliateSecondTreePct" min="0" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label>Settings note</label>
+            <input type="text" id="affiliateSettingsNote" value="Changes take effect on the next time affiliate rows are calculated." readonly />
+          </div>
+        </div>
+        <div class="settings-actions">
+          <button class="btn btn-primary" type="button" onclick="saveAffiliateSettingsForm()">Save affiliate settings</button>
+          <span id="affiliateSettingsStatus" style="font-size:13px;color:var(--text-muted);">Loading current settings...</span>
+        </div>
+      </div>
+
+      <div class="settings-panel" style="margin-top:20px;">
+        <h3>2nd tree override per referrer</h3>
+        <p>Assign a custom 2nd-tree rule to a specific referrer. If no override exists, the global setting above is used.</p>
+        <div class="settings-grid">
+          <div class="form-group">
+            <label>Referrer email</label>
+            <input type="email" id="ruleReferrerEmail" placeholder="affiliate@example.com" />
+          </div>
+          <div class="form-group">
+            <label>Portal type</label>
+            <select id="ruleReferrerPortalType">
+              <option value="worker">Worker</option>
+              <option value="owner">Account Owner</option>
+              <option value="affiliate">Affiliate</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>2nd tree enabled</label>
+            <select id="ruleSecondTreeEnabled">
+              <option value="false">Disabled</option>
+              <option value="true">Enabled</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>2nd tree %</label>
+            <input type="number" id="ruleSecondTreePct" min="0" step="0.01" placeholder="0.00" />
+          </div>
+          <div class="form-group" style="grid-column:1 / -1;">
+            <label>Notes</label>
+            <textarea id="ruleNotes" rows="3" placeholder="Optional notes for why this override exists."></textarea>
+          </div>
+        </div>
+        <div class="settings-actions">
+          <button class="btn btn-primary" type="button" onclick="saveReferrerRuleForm()">Save referrer rule</button>
+          <span id="ruleSettingsStatus" style="font-size:13px;color:var(--text-muted);">Use this to control whether a specific affiliate can earn from a second tree.</span>
+        </div>
+      </div>
+
+      <div class="settings-panel" style="margin-top:20px;">
+        <h3>Create task assignment</h3>
+        <p>Add a weekly task schedule with start/end dates and the daily time slots assigned to that week.</p>
+        <div class="settings-grid">
+          <div class="form-group">
+            <label>User email</label>
+            <input type="email" id="taskEmail" placeholder="person@example.com" />
+          </div>
+          <div class="form-group">
+            <label>Portal type</label>
+            <select id="taskPortalType">
+              <option value="worker">Worker</option>
+              <option value="owner">Account Owner</option>
+              <option value="affiliate">Affiliate</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Task name</label>
+            <input type="text" id="taskName" placeholder="Weekly task name" />
+          </div>
+          <div class="form-group">
+            <label>Weekly value (USD)</label>
+            <input type="number" id="taskWeeklyValue" min="0" step="0.01" placeholder="0.00" />
+          </div>
+          <div class="form-group">
+            <label>Week start</label>
+            <input type="date" id="taskWeekStart" />
+          </div>
+          <div class="form-group">
+            <label>Week end</label>
+            <input type="date" id="taskWeekEnd" />
+          </div>
+          <div class="form-group">
+            <label>Task start date</label>
+            <input type="date" id="taskStartDate" />
+          </div>
+          <div class="form-group">
+            <label>Task end date</label>
+            <input type="date" id="taskEndDate" />
+          </div>
+          <div class="form-group">
+            <label>Daily time slots JSON</label>
+            <textarea id="taskDailySlots" rows="4" placeholder='[{"day":"Mon","time":"09:00-11:00"}]'></textarea>
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select id="taskStatus">
+              <option value="scheduled">Scheduled</option>
+              <option value="active">Active</option>
+              <option value="completed">Completed</option>
+              <option value="paused">Paused</option>
+            </select>
+          </div>
+        </div>
+        <div class="settings-actions">
+          <button class="btn btn-primary" type="button" onclick="saveTaskAssignmentForm()">Save task assignment</button>
+          <span id="taskAssignmentStatus" style="font-size:13px;color:var(--text-muted);">Fill in a user and dates to create a schedule.</span>
+        </div>
+      </div>
+
+      <div class="admin-card" style="margin-top:20px;">
+        <div class="admin-card-header">
+          <h3>Weekly task assignments</h3>
+          <button class="admin-export-btn" onclick="exportData('affiliateTasks')"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v13M7 11l5 5 5-5"/><path d="M4 21h16"/></svg> Export CSV</button>
+        </div>
+        <div class="admin-table-wrapper">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>User</th><th>Portal</th><th>Task</th><th>Week</th><th>Start</th><th>End</th><th>Daily slots</th><th>USD</th>
+              </tr>
+            </thead>
+            <tbody id="affiliateTasksTableBody">
+              <tr><td colspan="8" class="admin-table-empty">No task assignments yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="admin-card" style="margin-top:20px;">
+        <div class="admin-card-header">
+          <h3>Referrer rules</h3>
+          <button class="admin-export-btn" onclick="exportData('affiliateRules')"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v13M7 11l5 5 5-5"/><path d="M4 21h16"/></svg> Export CSV</button>
+        </div>
+        <div class="admin-table-wrapper">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Referrer</th><th>Portal</th><th>2nd tree</th><th>Rate</th><th>Updated</th>
+              </tr>
+            </thead>
+            <tbody id="affiliateRulesTableBody">
+              <tr><td colspan="5" class="admin-table-empty">No referrer overrides yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="admin-two-col" style="margin-top:20px;">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h3>Weekly earning history</h3>
+            <button class="admin-export-btn" onclick="exportData('affiliateEarnings')"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v13M7 11l5 5 5-5"/><path d="M4 21h16"/></svg> Export CSV</button>
+          </div>
+          <div class="admin-table-wrapper">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>User</th><th>Portal</th><th>Week</th><th>USD</th><th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="affiliateEarningsTableBody">
+                <tr><td colspan="5" class="admin-table-empty">No earning history yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h3>Commission history</h3>
+            <button class="admin-export-btn" onclick="exportData('affiliateCommissions')"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v13M7 11l5 5 5-5"/><path d="M4 21h16"/></svg> Export CSV</button>
+          </div>
+          <div class="admin-table-wrapper">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Referrer</th><th>Referred</th><th>Tier</th><th>Rate</th><th>Commission USD</th>
+                </tr>
+              </thead>
+              <tbody id="affiliateCommissionsTableBody">
+                <tr><td colspan="5" class="admin-table-empty">No commissions yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-two-col" style="margin-top:20px;">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h3>Payout history</h3>
+            <button class="admin-export-btn" onclick="exportData('affiliatePayouts')"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v13M7 11l5 5 5-5"/><path d="M4 21h16"/></svg> Export CSV</button>
+          </div>
+          <div class="admin-table-wrapper">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>User</th><th>Portal</th><th>Week</th><th>Amount</th><th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="affiliatePayoutsTableBody">
+                <tr><td colspan="5" class="admin-table-empty">No payout history yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h3>Withdrawal history</h3>
+            <button class="admin-export-btn" onclick="exportData('affiliateWithdrawals')"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v13M7 11l5 5 5-5"/><path d="M4 21h16"/></svg> Export CSV</button>
+          </div>
+          <div class="admin-table-wrapper">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>User</th><th>Portal</th><th>Requested</th><th>Amount</th><th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="affiliateWithdrawalsTableBody">
+                <tr><td colspan="5" class="admin-table-empty">No withdrawal history yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- CONTACTS TAB -->
     <div id="tab-contacts" class="admin-tab-content admin-container" style="display:none;">
       <div class="admin-page-title">
@@ -323,6 +589,45 @@
       const div = document.createElement('div');
       div.textContent = value === null || value === undefined ? '' : String(value);
       return div.innerHTML;
+    }
+
+    function formatDate(value) {
+      if (!value) return '-';
+      return new Date(value).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    function formatMoney(value) {
+      const amount = Number(value || 0);
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+    }
+
+    function slotsToText(slots) {
+      if (!slots) return '-';
+      if (typeof slots === 'string') {
+        try { slots = JSON.parse(slots); } catch (_) { return slots; }
+      }
+      if (Array.isArray(slots)) {
+        return slots.map(slot => {
+          if (!slot) return '';
+          if (typeof slot === 'string') return slot;
+          const day = slot.day || slot.label || '';
+          const time = slot.time || slot.slot || slot.hours || '';
+          return [day, time].filter(Boolean).join(': ');
+        }).filter(Boolean).join(' | ') || '-';
+      }
+      if (typeof slots === 'object') {
+        return Object.entries(slots).map(([day, time]) => `${day}: ${time}`).join(' | ') || '-';
+      }
+      return String(slots);
+    }
+
+    function renderTableBody(tbodyId, rows, emptyMessage, rowRenderer, colspan) {
+      const tbody = document.getElementById(tbodyId);
+      if (!rows || !rows.length) {
+        tbody.innerHTML = `<tr><td colspan="${colspan}" class="admin-table-empty">${emptyMessage}</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = rows.map(rowRenderer).join('');
     }
 
     // Set today's date
@@ -464,6 +769,12 @@
       if (type === 'agreements') { data = await fetchAgreements(); filename = 'starkworth-agreements.csv'; }
       else if (type === 'workers') { data = await fetchWorkers(); filename = 'starkworth-workers.csv'; }
       else if (type === 'contacts') { data = await fetchContacts(); filename = 'starkworth-contacts.csv'; }
+      else if (type === 'affiliateTasks') { data = await fetchWeeklyTaskAssignmentsAll(); filename = 'starkworth-affiliate-tasks.csv'; }
+      else if (type === 'affiliateEarnings') { data = await fetchAffiliateEarningsAll(); filename = 'starkworth-affiliate-earnings.csv'; }
+      else if (type === 'affiliateCommissions') { data = await fetchAffiliateCommissionsAll(); filename = 'starkworth-affiliate-commissions.csv'; }
+      else if (type === 'affiliatePayouts') { data = await fetchAffiliatePayoutsAll(); filename = 'starkworth-affiliate-payouts.csv'; }
+      else if (type === 'affiliateWithdrawals') { data = await fetchAffiliateWithdrawalsAll(); filename = 'starkworth-affiliate-withdrawals.csv'; }
+      else if (type === 'affiliateRules') { data = await fetchAffiliateReferrerRulesAll(); filename = 'starkworth-affiliate-rules.csv'; }
       if (data.length === 0) { alert('No data to export yet.'); return; }
       const headers = Object.keys(data[0]).join(',');
       const rows = data.map(row =>
@@ -476,11 +787,141 @@
       URL.revokeObjectURL(url);
     }
 
+    function toggleAdminProfileMenu() {
+      const button = document.querySelector('.admin-profile-trigger');
+      const menu = document.getElementById('adminProfileMenu');
+      const open = button.getAttribute('aria-expanded') === 'true';
+      button.setAttribute('aria-expanded', String(!open));
+      menu.hidden = open;
+    }
+
+    async function saveAffiliateSettingsForm() {
+      const directPct = Number(document.getElementById('affiliateDirectPct').value || 0);
+      const secondTreeEnabled = document.getElementById('affiliateSecondTreeEnabled').value === 'true';
+      const secondTreePct = Number(document.getElementById('affiliateSecondTreePct').value || 0);
+      const status = document.getElementById('affiliateSettingsStatus');
+      status.textContent = 'Saving...';
+      const ok = await saveAffiliateSettings({
+        default_direct_pct: directPct,
+        second_tree_enabled: secondTreeEnabled,
+        second_tree_pct: secondTreePct
+      });
+      status.textContent = ok ? 'Affiliate settings saved.' : 'Could not save affiliate settings.';
+      if (ok) {
+        loadAdminData();
+      }
+    }
+
+    async function saveTaskAssignmentForm() {
+      const email = document.getElementById('taskEmail').value.trim();
+      const portalType = document.getElementById('taskPortalType').value;
+      const taskName = document.getElementById('taskName').value.trim();
+      const weeklyValueUsd = Number(document.getElementById('taskWeeklyValue').value || 0);
+      const weekStart = document.getElementById('taskWeekStart').value;
+      const weekEnd = document.getElementById('taskWeekEnd').value;
+      const taskStartDate = document.getElementById('taskStartDate').value;
+      const taskEndDate = document.getElementById('taskEndDate').value;
+      const dailySlotsRaw = document.getElementById('taskDailySlots').value.trim();
+      const statusValue = document.getElementById('taskStatus').value;
+      const status = document.getElementById('taskAssignmentStatus');
+
+      if (!email || !taskName || !weekStart || !weekEnd || !taskStartDate || !taskEndDate) {
+        status.textContent = 'Please fill in the required task fields.';
+        return;
+      }
+
+      let dailyTimeSlots = [];
+      if (dailySlotsRaw) {
+        try {
+          dailyTimeSlots = JSON.parse(dailySlotsRaw);
+        } catch (err) {
+          status.textContent = 'Daily time slots must be valid JSON.';
+          return;
+        }
+      }
+
+      status.textContent = 'Saving...';
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/weekly_task_assignments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${sessionStorage.getItem('sw_access_token') || SUPABASE_ANON_KEY}`,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          email,
+          portal_type: portalType,
+          task_name: taskName,
+          week_start: weekStart,
+          week_end: weekEnd,
+          task_start_date: taskStartDate,
+          task_end_date: taskEndDate,
+          daily_time_slots: dailyTimeSlots,
+          weekly_value_usd: weeklyValueUsd,
+          status: statusValue
+        })
+      });
+
+      status.textContent = response.ok ? 'Task assignment saved.' : 'Could not save task assignment.';
+      if (response.ok) {
+        document.getElementById('taskName').value = '';
+        document.getElementById('taskWeeklyValue').value = '';
+        document.getElementById('taskDailySlots').value = '';
+        loadAdminData();
+      }
+    }
+
+    async function saveReferrerRuleForm() {
+      const referrerEmail = document.getElementById('ruleReferrerEmail').value.trim();
+      const referrerPortalType = document.getElementById('ruleReferrerPortalType').value;
+      const secondTreeEnabled = document.getElementById('ruleSecondTreeEnabled').value === 'true';
+      const secondTreePct = Number(document.getElementById('ruleSecondTreePct').value || 0);
+      const notes = document.getElementById('ruleNotes').value.trim();
+      const status = document.getElementById('ruleSettingsStatus');
+
+      if (!referrerEmail) {
+        status.textContent = 'Please enter the referrer email.';
+        return;
+      }
+
+      status.textContent = 'Saving...';
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_referrer_rules?on_conflict=referrer_email,referrer_portal_type`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${sessionStorage.getItem('sw_access_token') || SUPABASE_ANON_KEY}`,
+          'Prefer': 'resolution=merge-duplicates,return=minimal'
+        },
+        body: JSON.stringify({
+          referrer_email: referrerEmail,
+          referrer_portal_type: referrerPortalType,
+          second_tree_enabled: secondTreeEnabled,
+          second_tree_pct: secondTreePct,
+          notes
+        })
+      });
+
+      status.textContent = response.ok ? 'Referrer rule saved.' : 'Could not save referrer rule.';
+      if (response.ok) {
+        document.getElementById('ruleNotes').value = '';
+        loadAdminData();
+      }
+    }
+
     // Load all data
     async function loadAdminData() {
       const agreements = await fetchAgreements();
       const workers = await fetchWorkers();
       const contacts = await fetchContacts();
+      const affiliateSettings = await fetchAffiliateSettings();
+      const affiliateEarnings = await fetchAffiliateEarningsAll();
+      const affiliatePayouts = await fetchAffiliatePayoutsAll();
+      const affiliateWithdrawals = await fetchAffiliateWithdrawalsAll();
+      const affiliateCommissions = await fetchAffiliateCommissionsAll();
+      const affiliateTasks = await fetchWeeklyTaskAssignmentsAll();
+      const affiliateRules = await fetchAffiliateReferrerRulesAll();
       const activeWorkers = workers.filter(w => w.approved);
       loadLiveChats();
 
@@ -488,6 +929,71 @@
       document.getElementById('statWorkers').textContent = workers.length;
       document.getElementById('statContacts').textContent = contacts.length;
       document.getElementById('statActive').textContent = activeWorkers.length;
+
+      const affiliateStatus = document.getElementById('affiliateSettingsStatus');
+      if (document.getElementById('affiliateDirectPct')) {
+        document.getElementById('affiliateDirectPct').value = affiliateSettings?.default_direct_pct ?? 5;
+        document.getElementById('affiliateSecondTreeEnabled').value = affiliateSettings?.second_tree_enabled ? 'true' : 'false';
+        document.getElementById('affiliateSecondTreePct').value = affiliateSettings?.second_tree_pct ?? 0;
+        if (affiliateStatus) affiliateStatus.textContent = 'Current settings loaded.';
+      }
+
+      renderTableBody('affiliateTasksTableBody', affiliateTasks, 'No task assignments yet.', row => `
+        <tr>
+          <td>${escapeHtml(row.email)}</td>
+          <td>${escapeHtml(row.portal_type)}</td>
+          <td>${escapeHtml(row.task_name)}</td>
+          <td>${escapeHtml(formatDate(row.week_start))} - ${escapeHtml(formatDate(row.week_end))}</td>
+          <td>${escapeHtml(formatDate(row.task_start_date))}</td>
+          <td>${escapeHtml(formatDate(row.task_end_date))}</td>
+          <td>${escapeHtml(slotsToText(row.daily_time_slots))}</td>
+          <td>${escapeHtml(formatMoney(row.weekly_value_usd))}</td>
+        </tr>`, 8);
+
+      renderTableBody('affiliateEarningsTableBody', affiliateEarnings, 'No earning history yet.', row => `
+        <tr>
+          <td>${escapeHtml(row.email)}</td>
+          <td>${escapeHtml(row.portal_type)}</td>
+          <td>${escapeHtml(formatDate(row.week_start))} - ${escapeHtml(formatDate(row.week_end))}</td>
+          <td>${escapeHtml(formatMoney(row.weekly_value_usd))}</td>
+          <td>${escapeHtml(row.status || 'pending')}</td>
+        </tr>`, 5);
+
+      renderTableBody('affiliateCommissionsTableBody', affiliateCommissions, 'No commissions yet.', row => `
+        <tr>
+          <td>${escapeHtml(row.referrer_email)}</td>
+          <td>${escapeHtml(row.referred_email)}</td>
+          <td>${escapeHtml(row.tier)}</td>
+          <td>${escapeHtml(String(row.rate_pct || 0))}%</td>
+          <td>${escapeHtml(formatMoney(row.commission_usd))}</td>
+        </tr>`, 5);
+
+      renderTableBody('affiliatePayoutsTableBody', affiliatePayouts, 'No payout history yet.', row => `
+        <tr>
+          <td>${escapeHtml(row.email)}</td>
+          <td>${escapeHtml(row.portal_type)}</td>
+          <td>${escapeHtml(formatDate(row.week_start))} - ${escapeHtml(formatDate(row.week_end))}</td>
+          <td>${escapeHtml(formatMoney(row.amount_usd))}</td>
+          <td>${escapeHtml(row.status || 'pending')}</td>
+        </tr>`, 5);
+
+      renderTableBody('affiliateWithdrawalsTableBody', affiliateWithdrawals, 'No withdrawal history yet.', row => `
+        <tr>
+          <td>${escapeHtml(row.email)}</td>
+          <td>${escapeHtml(row.portal_type)}</td>
+          <td>${escapeHtml(formatDate(row.requested_at))}</td>
+          <td>${escapeHtml(formatMoney(row.amount_usd))}</td>
+          <td>${escapeHtml(row.status || 'requested')}</td>
+        </tr>`, 5);
+
+      renderTableBody('affiliateRulesTableBody', affiliateRules, 'No referrer overrides yet.', row => `
+        <tr>
+          <td>${escapeHtml(row.referrer_email)}</td>
+          <td>${escapeHtml(row.referrer_portal_type)}</td>
+          <td>${row.second_tree_enabled ? 'Enabled' : 'Disabled'}</td>
+          <td>${escapeHtml(String(row.second_tree_pct || 0))}%</td>
+          <td>${escapeHtml(formatDate(row.updated_at))}</td>
+        </tr>`, 5);
 
       // Recent agreements
       const recentA = document.getElementById('recentAgreementsEmpty');
