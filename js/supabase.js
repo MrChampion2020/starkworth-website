@@ -66,7 +66,7 @@ async function saveAgreement(data) {
 
 // Save worker registration to Supabase (public form — stays on anon key)
 async function saveWorker(data) {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/workers`, {
+  const request = (payload) => fetch(`${SUPABASE_URL}/rest/v1/workers`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -74,9 +74,19 @@ async function saveWorker(data) {
       'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       'Prefer': 'return=minimal'
     },
-    body: JSON.stringify(data)
+    body: JSON.stringify(payload)
   });
-  return response.ok;
+  let response = await request(data);
+  let error = response.ok ? null : await response.json().catch(() => ({}));
+  if (!response.ok && (response.status === 400 || response.status === 404)) {
+    const fallback = { ...data };
+    delete fallback.weekly_value_usd;
+    delete fallback.referral_code;
+    delete fallback.referred_by_code;
+    response = await request(fallback);
+    error = response.ok ? null : await response.json().catch(() => error || ({}));
+  }
+  return { ok: response.ok, error };
 }
 
 async function saveAffiliateSettings(data) {
@@ -278,7 +288,8 @@ async function signUpWithPassword(email, password) {
 }
 
 async function signUpAffiliate(email, password, fullName, referredByCode = '') {
-  const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+  const verificationRedirect = `${window.location.origin}/pages/affiliate.html`;
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/signup?redirect_to=${encodeURIComponent(verificationRedirect)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
     body: JSON.stringify({ email, password, data: { portal_type: 'affiliate', full_name: fullName, referred_by_code: referredByCode } })
@@ -288,6 +299,24 @@ async function signUpAffiliate(email, password, fullName, referredByCode = '') {
     sessionStorage.setItem('sw_access_token', data.access_token);
     sessionStorage.setItem('sw_user_email', email);
   }
+  // Notification is deliberately best-effort and never changes signup success.
+  if (response.ok) {
+    fetch(`${SUPABASE_URL}/functions/v1/affiliate-notify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+      body: JSON.stringify({ email, full_name: fullName })
+    }).catch(() => {});
+  }
+  return { ok: response.ok, data };
+}
+
+async function provisionAffiliateProfile(fullName = '', referredByCode = '') {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/provision_affiliate_profile`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ p_full_name: fullName, p_referred_by_code: referredByCode })
+  });
+  const data = await response.json();
   return { ok: response.ok, data };
 }
 
@@ -312,7 +341,11 @@ async function signInAffiliate(email, password) {
   const result = await signInWithPassword(email, password);
   if (!result.ok) return result;
 
-  const profile = await fetchAffiliateAccount(email);
+  let profile = await fetchAffiliateAccount(email);
+  if (!profile) {
+    const repaired = await provisionAffiliateProfile('', getStoredReferralCode());
+    if (repaired.ok && repaired.data) profile = repaired.data;
+  }
   if (!profile || profile.status !== 'active') {
     signOut();
     return { ok: false, data: { msg: 'This login is not registered as an active affiliate account.' } };
@@ -328,11 +361,11 @@ async function fetchAffiliateAccount(email) {
   return response.ok ? (rows[0] || null) : null;
 }
 
-async function requestAffiliateWithdrawal(email, amountUsd, destination) {
+async function requestAffiliateWithdrawal(email, amountUsd, destination, portalType = 'affiliate') {
   const response = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_withdrawals`, {
     method: 'POST',
     headers: { ...getAuthHeaders(), 'Prefer': 'return=minimal' },
-    body: JSON.stringify({ email, portal_type: 'affiliate', amount_usd: Number(amountUsd), destination, status: 'requested' })
+    body: JSON.stringify({ email, portal_type: portalType, amount_usd: Number(amountUsd), destination, status: 'requested' })
   });
   return response.ok;
 }

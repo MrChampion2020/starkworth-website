@@ -265,6 +265,8 @@
       document.body.classList.remove('modal-open');
     }
 
+    if (window.location.hash === '#chatWrapper') openMenaModal();
+
     document.body.classList.add('modal-open');
 
     document.addEventListener('keydown', (e) => {

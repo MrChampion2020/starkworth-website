@@ -373,7 +373,7 @@
       referred_by_code: getStoredReferralCode() || null
     });
 
-    if (saved) {
+    if (saved.ok) {
       document.getElementById('successWorkerName').textContent = firstName + ' ' + lastName;
       document.getElementById('successWorkerEmail').textContent = email;
       document.querySelectorAll('.form-group, .form-section-title, .notice, .acknowledge-label, #registerBtn').forEach(el => {
@@ -381,7 +381,8 @@
       });
       document.getElementById('workerSuccess').style.display = 'block';
     } else {
-      alert('Something went wrong saving your profile. Please try again.');
+      const detail = saved.error?.message || saved.error?.details || saved.error?.hint || '';
+      alert('Something went wrong saving your profile.' + (detail ? ' ' + detail : ' Please try again.'));
       registerBtn.disabled = false;
       registerBtn.textContent = 'Submit Registration';
     }

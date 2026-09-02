@@ -32,6 +32,54 @@ const mobileMenu = document.getElementById('mobileMenu');
   });
 })();
 
+(function enhanceRoleDashboard() {
+  const path = window.location.pathname;
+  const role = path.includes('worker-dashboard') ? 'Worker' : path.includes('client-dashboard') ? 'Account Owner' : path.includes('affiliate-dashboard') ? 'Affiliate' : '';
+  if (!role) return;
+  document.body.classList.add('dashboard-page');
+  const section = document.querySelector('.portal-section') || document.querySelector('.dashboard-section');
+  const content = section?.querySelector('.portal-wrapper') || section?.querySelector(':scope > div');
+  if (!section || !content) return;
+  content.classList.add('dashboard-layout-inner');
+  const mainPanel = content.querySelector('#dashboardContent') || content.querySelector('#affiliateContent');
+  if (mainPanel) mainPanel.classList.add('dashboard-main-panel');
+
+  const sidebar = document.createElement('aside');
+  sidebar.className = 'dashboard-sidebar';
+  sidebar.innerHTML = `<div class="dashboard-sidebar-brand"><span class="dashboard-sidebar-kicker">Starkworth</span><strong>${role} workspace</strong></div><nav aria-label="Dashboard sections"><a href="#overview" class="dashboard-nav-link active" data-target="overview">Overview</a><a href="#earnings" class="dashboard-nav-link" data-target="earnings">Earnings</a><a href="#payouts" class="dashboard-nav-link" data-target="payouts">Payout history</a><a href="#withdrawals" class="dashboard-nav-link" data-target="withdrawals">Withdrawals</a><a href="#tasks" class="dashboard-nav-link" data-target="tasks">Task schedule</a><a href="support.html" class="dashboard-nav-link">Support &amp; Chat</a></nav><div class="dashboard-sidebar-footer"><span class="dashboard-sync-dot"></span>Live sync enabled<button type="button" class="dashboard-refresh" onclick="window.location.reload()">Refresh data</button></div>`;
+  content.insertBefore(sidebar, content.firstChild);
+
+  const panels = [...content.querySelectorAll('.history-panel')];
+  const targets = ['earnings', 'payouts', 'withdrawals', 'commissions', 'tasks'];
+  panels.forEach((panel, index) => { if (targets[index]) panel.id = targets[index]; });
+  const overview = content.querySelector('#dashboardBody') || content.querySelector('.dashboard-grid');
+  if (overview) overview.id = 'overview';
+  const links = sidebar.querySelectorAll('.dashboard-nav-link[data-target]');
+  links.forEach((link) => link.addEventListener('click', () => {
+    links.forEach((item) => item.classList.toggle('active', item === link));
+  }));
+
+  if (role !== 'Affiliate' && content.querySelector('#affiliateArea')) {
+    const area = content.querySelector('#affiliateArea');
+    const withdrawal = document.createElement('section');
+    withdrawal.className = 'dashboard-action-card';
+    withdrawal.innerHTML = `<div><span class="dashboard-card-label">Self-service payout</span><h3>Request a withdrawal</h3><p>Submit a withdrawal request for review. Your request and status will appear in Withdrawal history.</p></div><form class="dashboard-withdrawal-form"><label>Amount USD<input type="number" min="1" step="0.01" required name="amount" placeholder="0.00"></label><label>Destination<input required name="destination" placeholder="PayPal, bank, or wallet destination"></label><button class="btn btn-primary" type="submit">Request withdrawal</button><span class="dashboard-form-status" role="status"></span></form>`;
+    area.insertBefore(withdrawal, area.firstChild);
+    withdrawal.querySelector('form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const status = form.querySelector('.dashboard-form-status');
+      status.textContent = 'Submitting...';
+      const session = typeof getSession === 'function' ? getSession() : {};
+      const portalType = role === 'Worker' ? 'worker' : 'owner';
+      const ok = await requestAffiliateWithdrawal(session.email, form.amount.value, form.destination.value.trim(), portalType);
+      status.textContent = ok ? 'Withdrawal request submitted.' : 'Could not submit request.';
+      if (ok) form.reset();
+    });
+  }
+  window.setInterval(() => window.location.reload(), 60000);
+})();
+
 if (hamburger && mobileMenu) {
   hamburger.addEventListener('click', () => {
     const isOpen = mobileMenu.classList.toggle('open');

@@ -118,6 +118,24 @@
   <script>
     storeReferralCodeFromUrl();
 
+    async function handleAffiliateVerificationReturn() {
+      const hash = new URLSearchParams(window.location.hash.slice(1));
+      const accessToken = hash.get('access_token');
+      if (!accessToken || hash.get('type') !== 'signup') return;
+      try {
+        const payload = JSON.parse(atob(accessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+        sessionStorage.setItem('sw_access_token', accessToken);
+        sessionStorage.setItem('sw_user_email', payload.email || '');
+        const profile = await fetchAffiliateAccount(payload.email || '');
+        if (!profile) await provisionAffiliateProfile('', getStoredReferralCode());
+        history.replaceState(null, '', window.location.pathname);
+        window.location.href = 'affiliate-dashboard.html';
+      } catch (_) {
+        selectAffiliatePanel('affiliateLoginPanel');
+        document.getElementById('affiliateLoginStatus').textContent = 'Verification returned here. Please sign in to continue.';
+      }
+    }
+
     function selectAffiliatePanel(panelId) {
       document.querySelectorAll('.affiliate-tab-panel').forEach((panel) => {
         panel.hidden = panel.id !== panelId;
@@ -135,6 +153,7 @@
 
     if (window.location.hash === '#register') selectAffiliatePanel('affiliateSignupPanel');
     if (window.location.hash === '#rules') selectAffiliatePanel('affiliateRulesPanel');
+    handleAffiliateVerificationReturn();
 
     document.getElementById('affiliateLoginForm').addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -166,7 +185,7 @@
       status.textContent = 'Creating affiliate account...';
       const result = await signUpAffiliate(email, password, name, getStoredReferralCode());
       if (result.ok) {
-        status.textContent = result.data.access_token ? 'Account created. Opening your affiliate dashboard...' : 'Account created. Check your email to confirm, then sign in here.';
+        status.textContent = result.data.access_token ? 'Account saved. Opening your affiliate dashboard...' : 'Account saved. If verification is required, use the email link and you will return here to sign in.';
         if (result.data.access_token) window.location.href = 'affiliate-dashboard.html';
         else button.disabled = false;
         return;

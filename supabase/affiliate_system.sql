@@ -156,6 +156,32 @@ create trigger on_auth_user_created_affiliate
   after insert on auth.users
   for each row execute function public.create_affiliate_account_profile();
 
+-- Repairs profiles for affiliate users created while the trigger/migration was unavailable.
+create or replace function public.provision_affiliate_profile(
+  p_full_name text default null,
+  p_referred_by_code text default null
+)
+returns public.affiliate_accounts
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  current_user_email text;
+  current_metadata jsonb;
+  profile public.affiliate_accounts;
+begin
+  select email, raw_user_meta_data into current_user_email, current_metadata from auth.users where id = auth.uid();
+  if current_user_email is null or coalesce(current_metadata ->> 'portal_type', '') <> 'affiliate' then return null; end if;
+  insert into public.affiliate_accounts (email, full_name, referral_code, referred_by_code)
+  values (lower(current_user_email), coalesce(nullif(p_full_name, ''), nullif(current_metadata ->> 'full_name', ''), split_part(current_user_email, '@', 1)), public.generate_affiliate_referral_code(), coalesce(nullif(p_referred_by_code, ''), nullif(current_metadata ->> 'referred_by_code', '')))
+  on conflict (email) do update set full_name = coalesce(nullif(excluded.full_name, ''), affiliate_accounts.full_name), referred_by_code = coalesce(affiliate_accounts.referred_by_code, excluded.referred_by_code), updated_at = now()
+  returning * into profile;
+  return profile;
+end;
+$$;
+
+grant execute on function public.provision_affiliate_profile(text, text) to authenticated;
+
 alter table public.affiliate_accounts enable row level security;
 
 drop policy if exists "affiliate users can read own profile" on public.affiliate_accounts;
