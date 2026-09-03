@@ -25,7 +25,7 @@
         <div class="dashboard-card"><span class="dashboard-card-label">Direct rate</span><strong id="affiliateRate">5%</strong><small>Admin-controlled default</small></div>
         <div class="dashboard-card"><span class="dashboard-card-label">Second tree</span><strong id="affiliateSecondTree">Disabled</strong><small>Admin-controlled eligibility</small></div>
       </div>
-      <section class="worker-form-box" style="margin-bottom:24px;"><h2>Your unique referral link</h2><p>Share this link to refer account owners or annotators. Their roles remain separate from your affiliate account.</p><div style="display:flex;gap:10px;flex-wrap:wrap;"><input id="affiliateReferralLink" readonly style="flex:1;min-width:240px;"><button class="btn btn-primary" type="button" onclick="copyAffiliateLink()">Copy Link</button></div><p id="copyStatus" style="font-size:13px;color:var(--text-muted);"></p></section>
+      <section class="worker-form-box" style="margin-bottom:24px;"><h2>Your referral links</h2><p>Use the link that matches the role you are referring. Each link opens a separate Starkworth onboarding path.</p><div class="affiliate-dashboard-links"><div class="dashboard-link-field"><label for="affiliateLink">Refer another affiliate</label><div><input id="affiliateLink" readonly><button class="btn btn-outline" type="button" onclick="copyAffiliateLink('affiliateLink', this)">Copy</button></div></div><div class="dashboard-link-field"><label for="ownerReferralLink">Refer an account owner</label><div><input id="ownerReferralLink" readonly><button class="btn btn-primary" type="button" onclick="copyAffiliateLink('ownerReferralLink', this)">Copy</button></div></div><div class="dashboard-link-field"><label for="workerReferralLink">Refer a worker</label><div><input id="workerReferralLink" readonly><button class="btn btn-outline" type="button" onclick="copyAffiliateLink('workerReferralLink', this)">Copy</button></div></div></div><p id="copyStatus" style="font-size:13px;color:var(--text-muted);"></p></section>
       <section class="worker-form-box" style="margin-bottom:24px;"><h2>Request withdrawal</h2><form id="withdrawalForm" style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;"><label>Amount USD<input id="withdrawalAmount" type="number" min="1" step="0.01" required></label><label>Destination<input id="withdrawalDestination" required placeholder="PayPal or wallet destination"></label><button class="btn btn-primary" type="submit">Request</button></form><p id="withdrawalStatus" style="font-size:13px;color:var(--text-muted);"></p></section>
       <div class="worker-form-box"><h2>Affiliate history</h2><div class="table-scroll"><table class="admin-table"><thead><tr><th>Type</th><th>Date / Week</th><th>Amount</th><th>Status</th><th>Details</th></tr></thead><tbody id="affiliateHistory"></tbody></table></div></div>
     </div>
@@ -45,7 +45,9 @@
       document.getElementById('affiliateContent').style.display = 'block';
       document.getElementById('affiliateName').textContent = profile.full_name;
       document.getElementById('affiliateEmail').textContent = profile.email;
-      document.getElementById('affiliateReferralLink').value = buildReferralLink('client-portal.html', profile.referral_code);
+      document.getElementById('affiliateLink').value = buildReferralLink('affiliate.html?role=affiliate#register', profile.referral_code);
+      document.getElementById('ownerReferralLink').value = buildReferralLink('client-portal.html?role=owner', profile.referral_code);
+      document.getElementById('workerReferralLink').value = buildReferralLink('worker-register.html?role=worker', profile.referral_code);
       const [settings, commissions, payouts, withdrawals] = await Promise.all([
         fetchAffiliateSettings(), fetchAffiliateCommissions(profile.email), fetchAffiliatePayouts(profile.email), fetchAffiliateWithdrawals(profile.email)
       ]);
@@ -60,7 +62,7 @@
       ].sort((a, b) => String(b.date).localeCompare(String(a.date)));
       document.getElementById('affiliateHistory').innerHTML = history.length ? history.map(row => `<tr><td>${safe(row.type)}</td><td>${safe(row.date)}</td><td>${money(row.amount)}</td><td>${safe(row.status)}</td><td>${safe(row.details)}</td></tr>`).join('') : '<tr><td colspan="5">No affiliate history yet.</td></tr>';
     }
-    async function copyAffiliateLink() { await navigator.clipboard.writeText(document.getElementById('affiliateReferralLink').value); document.getElementById('copyStatus').textContent = 'Referral link copied.'; }
+    async function copyAffiliateLink(inputId, button) { await navigator.clipboard.writeText(document.getElementById(inputId).value); document.getElementById('copyStatus').textContent = 'Referral link copied.'; if (button) { const original = button.textContent; button.textContent = 'Copied'; setTimeout(() => button.textContent = original, 1200); } }
     document.getElementById('withdrawalForm').addEventListener('submit', async (event) => { event.preventDefault(); const ok = await requestAffiliateWithdrawal(affiliateEmail, document.getElementById('withdrawalAmount').value, document.getElementById('withdrawalDestination').value.trim()); document.getElementById('withdrawalStatus').textContent = ok ? 'Withdrawal request submitted.' : 'Could not submit withdrawal request.'; if (ok) event.target.reset(); });
     loadAffiliateDashboard().catch(() => { document.getElementById('affiliateAuthError').textContent = 'Unable to load your affiliate dashboard.'; document.getElementById('affiliateAuthError').style.display = 'block'; });
   </script>

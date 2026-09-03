@@ -27,8 +27,10 @@ function storeReferralCodeFromUrl() {
 
 function buildReferralLink(pagePath, referralCode) {
   const code = (referralCode || getStoredReferralCode() || '').trim();
-  const base = window.location.origin + '/pages/' + pagePath.replace(/^\/+/, '');
-  return code ? `${base}${base.includes('?') ? '&' : '?'}ref=${encodeURIComponent(code)}` : base;
+  const [path, hash = ''] = pagePath.replace(/^\/+/, '').split('#');
+  const base = window.location.origin + '/pages/' + path;
+  const query = code ? `${base.includes('?') ? '&' : '?'}ref=${encodeURIComponent(code)}` : '';
+  return `${base}${query}${hash ? `#${hash}` : ''}`;
 }
 
 async function fetchTableRows(table, query = '', headers = getAuthHeaders()) {

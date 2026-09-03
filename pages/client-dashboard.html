@@ -100,6 +100,13 @@
                   <button class="btn btn-outline" type="button" onclick="copyReferralLink('workerReferralLink', this)">Copy</button>
                 </div>
               </div>
+              <div style="margin-top:14px;">
+                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Affiliate invite link</label>
+                <div class="affiliate-link-row">
+                  <input type="text" id="affiliateReferralLink" readonly />
+                  <button class="btn btn-outline" type="button" onclick="copyReferralLink('affiliateReferralLink', this)">Copy</button>
+                </div>
+              </div>
             </div>
 
             <div class="history-panel">
@@ -348,8 +355,9 @@
         ? (referrerRule.second_tree_enabled ? `${Number(referrerRule.second_tree_pct || 0)}% enabled` : 'Disabled')
         : (settings?.second_tree_enabled ? `${Number(settings.second_tree_pct || 0)}% enabled` : 'Disabled');
       document.getElementById('referralEarningsCard').textContent = formatMoney(totalReferralEarnings);
-      document.getElementById('ownerReferralLink').value = buildReferralLink('client-portal.html', referralCode);
-      document.getElementById('workerReferralLink').value = buildReferralLink('worker-register.html', referralCode);
+      document.getElementById('ownerReferralLink').value = buildReferralLink('client-portal.html?role=owner', referralCode);
+      document.getElementById('workerReferralLink').value = buildReferralLink('worker-register.html?role=worker', referralCode);
+      document.getElementById('affiliateReferralLink').value = buildReferralLink('affiliate.html?role=affiliate#register', referralCode);
 
       renderRows('ownerEarningsBody', earnings, 'No earning history yet.', row => `
         <tr>
