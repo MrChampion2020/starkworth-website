@@ -71,6 +71,7 @@
               <input id="affiliateLoginPassword" type="password" required minlength="6" autocomplete="current-password" placeholder="Your password" />
               <button class="btn btn-primary btn-block" type="submit" id="affiliateLoginBtn" style="margin-top:16px;">Sign In as Affiliate</button>
               <p id="affiliateLoginStatus" role="alert" style="margin:12px 0 0;font-size:13px;"></p>
+              <p class="affiliate-switch-link"><a href="#" id="affiliateForgotPassword">Forgot password?</a></p>
               <p class="affiliate-switch-link">Don't have an account yet? <a href="#register" data-panel="affiliateSignupPanel">Create an affiliate account here</a></p>
             </form>
           </div>
@@ -155,6 +156,15 @@
     if (window.location.hash === '#register') selectAffiliatePanel('affiliateSignupPanel');
     if (window.location.hash === '#rules') selectAffiliatePanel('affiliateRulesPanel');
     handleAffiliateVerificationReturn();
+
+    document.getElementById('affiliateForgotPassword').addEventListener('click', async (event) => {
+      event.preventDefault();
+      const email = document.getElementById('affiliateLoginEmail').value.trim().toLowerCase();
+      const status = document.getElementById('affiliateLoginStatus');
+      if (!email) { status.textContent = 'Enter your affiliate email first.'; return; }
+      status.textContent = 'Sending recovery link...';
+      status.textContent = await resetPassword(email) ? 'Recovery link sent. Check your email.' : 'Could not send recovery link.';
+    });
 
     document.getElementById('affiliateLoginForm').addEventListener('submit', async (event) => {
       event.preventDefault();
