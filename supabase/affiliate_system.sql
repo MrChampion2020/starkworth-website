@@ -550,7 +550,10 @@ as $$
 declare
   earning public.affiliate_earnings;
   referral record;
+  parent_referral record;
   direct_rate numeric;
+  second_tree_rate numeric;
+  second_tree_allowed boolean;
   allocated numeric := round(greatest(coalesce(p_gross_amount_usd, 0), 0) * greatest(coalesce(p_account_rate_pct, 0), 0) / 100, 2);
 begin
   if not public.is_starkworth_admin() then raise exception 'Admin access required'; end if;
@@ -589,6 +592,39 @@ begin
     on conflict (referrer_email, referred_email, referred_portal_type, tier, week_start, week_end)
     do update set rate_pct = excluded.rate_pct, base_amount_usd = excluded.base_amount_usd,
       commission_usd = excluded.commission_usd, notes = excluded.notes;
+
+    -- If the direct referrer was itself referred, pay that upstream referrer
+    -- when its second-tree rule is enabled.
+    select ar.* into parent_referral
+      from public.affiliate_referrals ar
+      where ar.referred_email = referral.referrer_email
+        and ar.referred_portal_type = referral.referrer_portal_type
+        and ar.status <> 'inactive'
+      order by ar.captured_at asc limit 1;
+    if parent_referral.referrer_email is not null then
+      select coalesce(r.second_tree_enabled, s.second_tree_enabled, false),
+             coalesce(r.second_tree_pct, s.second_tree_pct, 0)
+        into second_tree_allowed, second_tree_rate
+        from public.affiliate_settings s
+        left join public.affiliate_referrer_rules r
+          on r.referrer_email = parent_referral.referrer_email
+         and r.referrer_portal_type = parent_referral.referrer_portal_type
+        where s.id = 1;
+      if second_tree_allowed and second_tree_rate > 0 then
+        insert into public.affiliate_commissions
+          (referrer_email, referrer_portal_type, referred_email, referred_portal_type, tier,
+           rate_pct, base_amount_usd, commission_usd, week_start, week_end, second_tree_enabled, notes)
+        values
+          (parent_referral.referrer_email, parent_referral.referrer_portal_type,
+           referral.referred_email, referral.referred_portal_type, 2, second_tree_rate,
+           allocated, round(allocated * second_tree_rate / 100, 2), p_period_start, p_period_end,
+           true, 'Second-tree referral commission')
+        on conflict (referrer_email, referred_email, referred_portal_type, tier, week_start, week_end)
+        do update set rate_pct = excluded.rate_pct, base_amount_usd = excluded.base_amount_usd,
+          commission_usd = excluded.commission_usd, second_tree_enabled = excluded.second_tree_enabled,
+          notes = excluded.notes;
+      end if;
+    end if;
     update public.affiliate_referrals set status = 'eligible', onboarded_at = coalesce(onboarded_at, now()), updated_at = now()
       where id = referral.id;
   end loop;
@@ -728,5 +764,76 @@ begin
   on conflict (referrer_email, referrer_portal_type)
   do update set direct_rate_pct = 10, second_tree_enabled = true, second_tree_pct = 10,
     notes = excluded.notes, updated_at = now();
+end;
+$$;
+
+-- Requested referral assignment for the existing Peter Jefia account.
+-- This block is idempotent and detects both portal types from existing data.
+do $$
+declare
+  v_referred_email text := 'peterjefia@gmail.com';
+  v_referred_id uuid := '4f1ebed3-aa2e-4514-aabb-2b81d9165dcb';
+  v_referrer_email text := 'runor2000@gmail.com';
+  v_referrer_code text;
+  v_referrer_portal text;
+  v_referred_portal text;
+begin
+  select lower(email) into v_referred_email from auth.users where id = v_referred_id limit 1;
+  if v_referred_email is null then v_referred_email := 'peterjefia@gmail.com'; end if;
+
+  select referral_code, 'affiliate' into v_referrer_code, v_referrer_portal from public.affiliate_accounts where lower(email) = lower(v_referrer_email) limit 1;
+  if v_referrer_code is null then select referral_code, 'worker' into v_referrer_code, v_referrer_portal from public.workers where lower(email) = lower(v_referrer_email) limit 1; end if;
+  if v_referrer_code is null then select referral_code, 'owner' into v_referrer_code, v_referrer_portal from public.agreements where lower(email) = lower(v_referrer_email) limit 1; end if;
+  if v_referrer_code is null then raise exception 'Referrer account was not found: %', v_referrer_email; end if;
+
+  select 'affiliate' into v_referred_portal from public.affiliate_accounts where lower(email) = lower(v_referred_email) or id = v_referred_id limit 1;
+  if v_referred_portal is null then select 'worker' into v_referred_portal from public.workers where lower(email) = lower(v_referred_email) or id = v_referred_id limit 1; end if;
+  if v_referred_portal is null then select 'owner' into v_referred_portal from public.agreements where lower(email) = lower(v_referred_email) or id = v_referred_id limit 1; end if;
+  if v_referred_portal is null then v_referred_portal := 'owner'; end if;
+
+  update public.affiliate_accounts set referred_by_code = v_referrer_code where lower(email) = lower(v_referred_email) or id = v_referred_id;
+  update public.workers set referred_by_code = v_referrer_code where lower(email) = lower(v_referred_email) or id = v_referred_id;
+  update public.agreements set referred_by_code = v_referrer_code where lower(email) = lower(v_referred_email) or id = v_referred_id;
+
+  insert into public.affiliate_referrals
+    (referrer_email, referrer_portal_type, referred_email, referred_portal_type, referral_code, status, onboarded_at, notes)
+  values (lower(v_referrer_email), v_referrer_portal, lower(v_referred_email), v_referred_portal, v_referrer_code, 'onboarded', now(), 'Requested referral assignment')
+  on conflict (referrer_email, referred_email, referred_portal_type)
+  do update set referrer_portal_type = excluded.referrer_portal_type, referral_code = excluded.referral_code,
+    status = 'onboarded', onboarded_at = coalesce(affiliate_referrals.onboarded_at, now()), notes = excluded.notes, updated_at = now();
+end;
+$$;
+
+-- Backfill existing earning periods for King's second tree.
+do $$
+declare
+  v_earning record;
+begin
+  for v_earning in
+    select e.*, direct_referral.referred_email as direct_referee,
+           king_referral.referrer_portal_type as king_portal
+      from public.affiliate_earnings e
+      join public.affiliate_referrals direct_referral
+        on direct_referral.referred_email = e.email
+       and direct_referral.referred_portal_type = e.portal_type
+      join public.affiliate_referrals king_referral
+        on king_referral.referred_email = direct_referral.referrer_email
+       and king_referral.referred_portal_type = direct_referral.referrer_portal_type
+      where lower(king_referral.referrer_email) = 'kingedendgreat2017@gmail.com'
+        and e.portal_type in ('worker', 'owner', 'affiliate')
+        and king_referral.status <> 'inactive'
+  loop
+    insert into public.affiliate_commissions
+      (referrer_email, referrer_portal_type, referred_email, referred_portal_type, tier,
+       rate_pct, base_amount_usd, commission_usd, week_start, week_end, second_tree_enabled, notes)
+    values
+      ('kingedendgreat2017@gmail.com', v_earning.king_portal, v_earning.email, v_earning.portal_type, 2, 10,
+       coalesce(v_earning.allocated_amount_usd, v_earning.weekly_value_usd, 0),
+       round(coalesce(v_earning.allocated_amount_usd, v_earning.weekly_value_usd, 0) * 10 / 100, 2),
+       v_earning.week_start, v_earning.week_end, true, 'Backfilled second-tree referral commission')
+    on conflict (referrer_email, referred_email, referred_portal_type, tier, week_start, week_end)
+    do update set rate_pct = excluded.rate_pct, base_amount_usd = excluded.base_amount_usd,
+      commission_usd = excluded.commission_usd, second_tree_enabled = true, notes = excluded.notes;
+  end loop;
 end;
 $$;

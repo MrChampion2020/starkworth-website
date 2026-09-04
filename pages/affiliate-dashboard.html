@@ -60,7 +60,7 @@
       document.getElementById('affiliateEarnings').textContent = money(total);
       const referrerRule = await fetchAffiliateReferrerRule(profile.email, 'affiliate');
       document.getElementById('affiliateRate').textContent = `${referrerRule?.direct_rate_pct ?? settings?.default_direct_pct ?? 5}%`;
-      document.getElementById('affiliateSecondTree').textContent = settings?.second_tree_enabled ? `${settings.second_tree_pct || 0}% enabled` : 'Disabled';
+      document.getElementById('affiliateSecondTree').textContent = (referrerRule?.second_tree_enabled ?? settings?.second_tree_enabled) ? `${referrerRule?.second_tree_pct ?? settings?.second_tree_pct ?? 0}% enabled` : 'Disabled';
       const empty = (columns, text) => `<tr><td colspan="${columns}" class="history-empty">${text}</td></tr>`;
       document.getElementById('affiliateEarningsHistory').innerHTML = commissions.length ? commissions.map(row => `<tr><td>${safe(row.referred_email)}<br><small>${safe(row.referred_portal_type)}</small></td><td>T${safe(row.tier)}</td><td>${safe(row.rate_pct)}%</td><td>${money(row.base_amount_usd)}</td><td>${money(row.commission_usd)}</td><td>${safe(row.week_start)} - ${safe(row.week_end)}</td></tr>`).join('') : empty(6, 'No commission earnings recorded yet.');
       document.getElementById('affiliatePayoutHistory').innerHTML = payouts.length ? payouts.map(row => `<tr><td>${safe(row.week_start)} - ${safe(row.week_end)}</td><td>${money(row.amount_usd)}</td><td>${safe(row.payout_method || '-')}</td><td>${safe(row.status)}</td><td>${safe(row.paid_at || row.created_at)}</td></tr>`).join('') : empty(5, 'No payouts recorded yet.');
