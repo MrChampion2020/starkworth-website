@@ -22,7 +22,7 @@
       <div class="dashboard-grid" style="margin-bottom:24px;">
         <div class="dashboard-card"><span class="dashboard-card-label">Affiliate</span><strong id="affiliateName">-</strong><small id="affiliateEmail">-</small></div>
         <div class="dashboard-card"><span class="dashboard-card-label">Referral earnings</span><strong id="affiliateEarnings">$0.00</strong><small>All recorded commissions</small></div>
-        <div class="dashboard-card"><span class="dashboard-card-label">Direct rate</span><strong id="affiliateRate">5%</strong><small>Admin-controlled default</small></div>
+        <div class="dashboard-card"><span class="dashboard-card-label">Direct rate</span><strong id="affiliateRate">5%</strong><small>Admin-controlled rate</small></div>
         <div class="dashboard-card"><span class="dashboard-card-label">Second tree</span><strong id="affiliateSecondTree">Disabled</strong><small>Admin-controlled eligibility</small></div>
         <div class="dashboard-card"><span class="dashboard-card-label">Referrals</span><strong id="affiliateReferralCount">0</strong><small>Tracked referral signups</small></div>
       </div>
@@ -58,7 +58,8 @@
       ]);
       const total = commissions.reduce((sum, row) => sum + Number(row.commission_usd || 0), 0);
       document.getElementById('affiliateEarnings').textContent = money(total);
-      document.getElementById('affiliateRate').textContent = `${settings?.default_direct_pct ?? 5}%`;
+      const referrerRule = await fetchAffiliateReferrerRule(profile.email, 'affiliate');
+      document.getElementById('affiliateRate').textContent = `${referrerRule?.direct_rate_pct ?? settings?.default_direct_pct ?? 5}%`;
       document.getElementById('affiliateSecondTree').textContent = settings?.second_tree_enabled ? `${settings.second_tree_pct || 0}% enabled` : 'Disabled';
       const empty = (columns, text) => `<tr><td colspan="${columns}" class="history-empty">${text}</td></tr>`;
       document.getElementById('affiliateEarningsHistory').innerHTML = commissions.length ? commissions.map(row => `<tr><td>${safe(row.referred_email)}<br><small>${safe(row.referred_portal_type)}</small></td><td>T${safe(row.tier)}</td><td>${safe(row.rate_pct)}%</td><td>${money(row.base_amount_usd)}</td><td>${money(row.commission_usd)}</td><td>${safe(row.week_start)} - ${safe(row.week_end)}</td></tr>`).join('') : empty(6, 'No commission earnings recorded yet.');

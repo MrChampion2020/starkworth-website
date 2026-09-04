@@ -589,6 +589,10 @@
     const notes = document.getElementById('notes').value;
     const notesWithAccountType = accountType ? `Account type: ${accountType}. ${notes}` : notes;
     const referralCode = getStoredReferralCode();
+    if (!referralCode) {
+      alert('A referral link is required to complete account owner onboarding. Please use a valid referral link.');
+      return;
+    }
 
     const submitBtn = document.getElementById('submitBtn');
     submitBtn.disabled = true;

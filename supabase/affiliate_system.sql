@@ -6,13 +6,31 @@
 --   3. Weekly earning, payout, withdrawal, commission, and task schedule tables.
 --   4. RLS policies so users can read only their own rows, while admins manage all data.
 
+-- All privileged users live in their own table; this keeps admin identities
+-- separate from worker, owner, and affiliate profiles.
+create table if not exists public.starkworth_admins (
+  id uuid primary key default gen_random_uuid(),
+  email text not null unique,
+  display_name text,
+  role text not null default 'super_admin' check (role in ('super_admin', 'admin')),
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+insert into public.starkworth_admins (email, display_name, role)
+values ('admin@starkworth.org', 'Starkworth Admin', 'super_admin')
+on conflict (email) do nothing;
+
 create or replace function public.is_starkworth_admin()
 returns boolean
 language sql
 stable
+security definer
+set search_path = public
 as $$
-  select coalesce(auth.jwt() ->> 'email', '') in (
-    'admin@starkworth.org'
+  select exists (
+    select 1 from public.starkworth_admins a
+    where lower(a.email) = lower(coalesce(auth.jwt() ->> 'email', '')) and a.active
   );
 $$;
 
@@ -171,6 +189,69 @@ begin
 end;
 $$;
 
+create or replace function public.require_referral_code()
+returns trigger language plpgsql as $$
+begin
+  if nullif(trim(new.referred_by_code), '') is null then
+    raise exception 'A referral code is required to complete onboarding';
+  end if;
+  if not exists (select 1 from public.affiliate_accounts where referral_code = trim(new.referred_by_code))
+    and not exists (select 1 from public.workers where referral_code = trim(new.referred_by_code))
+    and not exists (select 1 from public.agreements where referral_code = trim(new.referred_by_code)) then
+    raise exception 'The referral code is invalid';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function public.link_existing_referral(
+  p_referrer_email text,
+  p_referrer_portal_type text,
+  p_referred_email text,
+  p_referred_portal_type text,
+  p_referral_code text default null,
+  p_notes text default 'Linked manually by admin'
+)
+returns public.affiliate_referrals
+language plpgsql security definer set search_path = public
+as $$
+declare
+  ref_code text := nullif(trim(p_referral_code), '');
+  linked public.affiliate_referrals;
+begin
+  if not public.is_starkworth_admin() then raise exception 'Admin access required'; end if;
+  if lower(trim(p_referrer_portal_type)) not in ('worker', 'owner', 'affiliate') or lower(trim(p_referred_portal_type)) not in ('worker', 'owner', 'affiliate') then raise exception 'Invalid portal type'; end if;
+  if lower(trim(p_referrer_email)) = lower(trim(p_referred_email)) then raise exception 'Referrer and referred user must be different'; end if;
+
+  if ref_code is null then
+    select referral_code into ref_code from public.affiliate_accounts where lower(email) = lower(trim(p_referrer_email)) limit 1;
+    if ref_code is null then select referral_code into ref_code from public.workers where lower(email) = lower(trim(p_referrer_email)) limit 1; end if;
+    if ref_code is null then select referral_code into ref_code from public.agreements where lower(email) = lower(trim(p_referrer_email)) limit 1; end if;
+  end if;
+  if ref_code is null then raise exception 'Referrer referral code was not found'; end if;
+
+  insert into public.affiliate_referrals
+    (referrer_email, referrer_portal_type, referred_email, referred_portal_type, referral_code, status, onboarded_at, notes)
+  values
+    (lower(trim(p_referrer_email)), lower(trim(p_referrer_portal_type)), lower(trim(p_referred_email)), lower(trim(p_referred_portal_type)), ref_code, 'onboarded', now(), p_notes)
+  on conflict (referrer_email, referred_email, referred_portal_type)
+  do update set referrer_portal_type = excluded.referrer_portal_type, referral_code = excluded.referral_code,
+    status = 'onboarded', onboarded_at = coalesce(affiliate_referrals.onboarded_at, now()), notes = excluded.notes, updated_at = now()
+  returning * into linked;
+  return linked;
+end;
+$$;
+
+grant execute on function public.link_existing_referral(text, text, text, text, text, text) to authenticated;
+
+drop trigger if exists workers_require_referral_code on public.workers;
+create trigger workers_require_referral_code before insert on public.workers
+  for each row execute function public.require_referral_code();
+
+drop trigger if exists agreements_require_referral_code on public.agreements;
+create trigger agreements_require_referral_code before insert on public.agreements
+  for each row execute function public.require_referral_code();
+
 create or replace function public.create_affiliate_account_profile()
 returns trigger
 language plpgsql
@@ -178,6 +259,14 @@ security definer set search_path = public
 as $$
 begin
   if coalesce(new.raw_user_meta_data ->> 'portal_type', '') = 'affiliate' then
+    if nullif(trim(new.raw_user_meta_data ->> 'referred_by_code'), '') is null then
+      raise exception 'A referral code is required to create an affiliate account';
+    end if;
+    if not exists (select 1 from public.affiliate_accounts where referral_code = trim(new.raw_user_meta_data ->> 'referred_by_code'))
+      and not exists (select 1 from public.workers where referral_code = trim(new.raw_user_meta_data ->> 'referred_by_code'))
+      and not exists (select 1 from public.agreements where referral_code = trim(new.raw_user_meta_data ->> 'referred_by_code')) then
+      raise exception 'The referral code is invalid';
+    end if;
     insert into public.affiliate_accounts (email, full_name, referral_code, referred_by_code)
     values (lower(new.email), coalesce(nullif(new.raw_user_meta_data ->> 'full_name', ''), split_part(new.email, '@', 1)), public.generate_affiliate_referral_code(), nullif(new.raw_user_meta_data ->> 'referred_by_code', ''))
     on conflict (email) do nothing;
@@ -191,6 +280,20 @@ drop trigger if exists on_auth_user_created_affiliate on auth.users;
 create trigger on_auth_user_created_affiliate
   after insert on auth.users
   for each row execute function public.create_affiliate_account_profile();
+
+create or replace function public.record_owner_auth_referral()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if coalesce(new.raw_user_meta_data ->> 'portal_type', '') = 'owner' then
+    perform public.record_affiliate_referral(lower(new.email), 'owner', new.raw_user_meta_data ->> 'referred_by_code');
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created_owner_referral on auth.users;
+create trigger on_auth_user_created_owner_referral after insert on auth.users
+  for each row execute function public.record_owner_auth_referral();
 
 create or replace function public.record_worker_referral()
 returns trigger language plpgsql security definer set search_path = public as $$
@@ -225,6 +328,20 @@ begin
   end loop;
   for row in select email, referred_by_code from public.agreements where nullif(referred_by_code, '') is not null loop
     perform public.record_affiliate_referral(lower(row.email), 'owner', row.referred_by_code);
+  end loop;
+end;
+$$;
+
+-- Rebuild referral history for accounts created before the referral trigger was installed.
+do $$
+declare
+  v_row record;
+begin
+  for v_row in select email, referred_by_code from public.workers where nullif(trim(referred_by_code), '') is not null loop
+    perform public.record_affiliate_referral(lower(v_row.email), 'worker', trim(v_row.referred_by_code));
+  end loop;
+  for v_row in select email, referred_by_code from public.agreements where nullif(trim(referred_by_code), '') is not null loop
+    perform public.record_affiliate_referral(lower(v_row.email), 'owner', trim(v_row.referred_by_code));
   end loop;
 end;
 $$;
@@ -375,6 +492,7 @@ create table if not exists public.affiliate_referrer_rules (
   id uuid primary key default gen_random_uuid(),
   referrer_email text not null,
   referrer_portal_type text not null check (referrer_portal_type in ('worker', 'owner')),
+  direct_rate_pct numeric(5,2) not null default 5,
   second_tree_enabled boolean not null default false,
   second_tree_pct numeric(5,2) not null default 0,
   notes text,
@@ -449,14 +567,17 @@ begin
      greatest(coalesce(p_account_rate_pct, 0), 0), allocated, 'pending', p_notes)
   returning * into earning;
 
-  select coalesce(s.default_direct_pct, 5) into direct_rate from public.affiliate_settings s where s.id = 1;
-
   for referral in
     select ar.* from public.affiliate_referrals ar
     where ar.referred_email = lower(trim(p_email))
       and ar.referred_portal_type = lower(trim(p_portal_type))
       and ar.status <> 'inactive'
   loop
+    select coalesce(r.direct_rate_pct, s.default_direct_pct, 5) into direct_rate
+      from public.affiliate_settings s
+      left join public.affiliate_referrer_rules r on r.referrer_email = referral.referrer_email
+        and r.referrer_portal_type = referral.referrer_portal_type
+      where s.id = 1;
     insert into public.affiliate_commissions
       (referrer_email, referrer_portal_type, referred_email, referred_portal_type, tier,
        rate_pct, base_amount_usd, commission_usd, week_start, week_end, second_tree_enabled, notes)
@@ -478,6 +599,7 @@ $$;
 grant execute on function public.allocate_account_earnings(text, text, text, date, date, numeric, numeric, text) to authenticated;
 alter table public.affiliate_referrer_rules drop constraint if exists affiliate_referrer_rules_referrer_portal_type_check;
 alter table public.affiliate_referrer_rules add constraint affiliate_referrer_rules_referrer_portal_type_check check (referrer_portal_type in ('worker', 'owner', 'affiliate'));
+alter table public.affiliate_referrer_rules add column if not exists direct_rate_pct numeric(5,2) not null default 5;
 
 -- ===== RLS =====
 alter table public.affiliate_settings enable row level security;
@@ -570,3 +692,41 @@ create policy "users can read own referrals" on public.affiliate_referrals
 drop policy if exists "admins can manage referrals" on public.affiliate_referrals;
 create policy "admins can manage referrals" on public.affiliate_referrals
   for all to authenticated using (public.is_starkworth_admin()) with check (public.is_starkworth_admin());
+
+-- Requested assignment: connect the existing account owner to the supplied referrer.
+-- This block is idempotent and can safely be run again after the migration.
+do $$
+declare
+  v_owner_email text := 'taiye.aiyeki@gmail.com';
+  v_owner_id uuid := 'fbff33fb-6aed-4597-a453-70a1a9b2faed';
+  v_referrer_email text := 'kingedendgreat2017@gmail.com';
+  v_referrer_code text;
+  v_referrer_portal text;
+begin
+  select lower(email) into v_owner_email from auth.users where id = v_owner_id limit 1;
+  if v_owner_email is null then v_owner_email := 'taiye.aiyeki@gmail.com'; end if;
+  if not exists (select 1 from auth.users where id = v_owner_id or lower(email) = lower(v_owner_email))
+    and not exists (select 1 from public.agreements where id = v_owner_id or lower(email) = lower(v_owner_email)) then
+    raise exception 'Account owner was not found in Auth or agreements: %', v_owner_email;
+  end if;
+  select referral_code, 'affiliate' into v_referrer_code, v_referrer_portal from public.affiliate_accounts where lower(email) = lower(v_referrer_email) limit 1;
+  if v_referrer_code is null then select referral_code, 'worker' into v_referrer_code, v_referrer_portal from public.workers where lower(email) = lower(v_referrer_email) limit 1; end if;
+  if v_referrer_code is null then select referral_code, 'owner' into v_referrer_code, v_referrer_portal from public.agreements where lower(email) = lower(v_referrer_email) limit 1; end if;
+  if v_referrer_code is null then raise exception 'Referrer account was not found: %', v_referrer_email; end if;
+  update public.agreements set referred_by_code = v_referrer_code
+    where id = v_owner_id or lower(email) = lower(v_owner_email);
+  insert into public.affiliate_referrals
+    (referrer_email, referrer_portal_type, referred_email, referred_portal_type, referral_code, status, onboarded_at, notes)
+  values (lower(v_referrer_email), v_referrer_portal, lower(v_owner_email), 'owner', v_referrer_code, 'onboarded', now(), 'Requested referral assignment')
+  on conflict (referrer_email, referred_email, referred_portal_type)
+  do update set referrer_portal_type = excluded.referrer_portal_type, referral_code = excluded.referral_code,
+    status = 'onboarded', onboarded_at = coalesce(affiliate_referrals.onboarded_at, now()), notes = excluded.notes, updated_at = now();
+
+  insert into public.affiliate_referrer_rules
+    (referrer_email, referrer_portal_type, direct_rate_pct, second_tree_enabled, second_tree_pct, notes)
+  values (lower(v_referrer_email), v_referrer_portal, 10, true, 10, 'Requested 10% direct and 10% second-tree referral rates')
+  on conflict (referrer_email, referrer_portal_type)
+  do update set direct_rate_pct = 10, second_tree_enabled = true, second_tree_pct = 10,
+    notes = excluded.notes, updated_at = now();
+end;
+$$;

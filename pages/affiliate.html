@@ -193,6 +193,7 @@
       const button = document.getElementById('affiliateSignupBtn');
       const status = document.getElementById('affiliateSignupStatus');
       if (password !== confirm) { status.textContent = 'Passwords do not match.'; return; }
+      if (!getStoredReferralCode()) { status.textContent = 'A referral link is required to create an affiliate account.'; return; }
       button.disabled = true;
       status.textContent = 'Creating affiliate account...';
       const result = await signUpAffiliate(email, password, name, getStoredReferralCode());

@@ -157,6 +157,22 @@ async function allocateAccountEarnings(data) {
   return { ok: response.ok, data: await response.json().catch(() => null) };
 }
 
+async function linkExistingReferral(data) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/link_existing_referral`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      p_referrer_email: data.referrer_email,
+      p_referrer_portal_type: data.referrer_portal_type,
+      p_referred_email: data.referred_email,
+      p_referred_portal_type: data.referred_portal_type,
+      p_referral_code: data.referral_code || null,
+      p_notes: data.notes || 'Linked manually by admin'
+    })
+  });
+  return { ok: response.ok, data: await response.json().catch(() => null) };
+}
+
 async function fetchWeeklyTaskAssignments(email) {
   const query = email ? `email=eq.${escapeQuery(email)}&order=week_start.desc,created_at.desc` : 'order=week_start.desc,created_at.desc';
   return fetchTableRows('weekly_task_assignments', query);
@@ -312,14 +328,14 @@ async function sendMenaAdminReply(id, currentMessages, text) {
 
 // ===== Auth (Supabase GoTrue) =====
 
-async function signUpWithPassword(email, password) {
+async function signUpWithPassword(email, password, metadata = null) {
   const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'apikey': SUPABASE_ANON_KEY
     },
-    body: JSON.stringify({ email, password })
+    body: JSON.stringify({ email, password, ...(metadata ? { data: metadata } : {}) })
   });
   const data = await response.json();
   return { ok: response.ok, data };

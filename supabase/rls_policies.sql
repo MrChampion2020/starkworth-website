@@ -29,51 +29,66 @@ create or replace function public.is_starkworth_admin()
 returns boolean
 language sql
 stable
+security definer
+set search_path = public
 as $$
-  select coalesce(auth.jwt() ->> 'email', '') in (
-    'admin@starkworth.org'
-    -- , 'second-admin@starkworth.org'
+  select exists (
+    select 1 from public.starkworth_admins a
+    where lower(a.email) = lower(coalesce(auth.jwt() ->> 'email', '')) and a.active
   );
 $$;
 
 -- ===== agreements =====
+drop policy if exists "anon can submit agreements" on public.agreements;
 create policy "anon can submit agreements" on public.agreements
   for insert to anon with check (true);
 
+drop policy if exists "admins can read agreements" on public.agreements;
 create policy "admins can read agreements" on public.agreements
   for select to authenticated using (public.is_starkworth_admin());
 
+drop policy if exists "account owners can read own agreement" on public.agreements;
 create policy "account owners can read own agreement" on public.agreements
   for select to authenticated using (auth.jwt() ->> 'email' = email);
 
+drop policy if exists "admins can update agreements" on public.agreements;
 create policy "admins can update agreements" on public.agreements
   for update to authenticated using (public.is_starkworth_admin());
 
+drop policy if exists "admins can delete agreements" on public.agreements;
 create policy "admins can delete agreements" on public.agreements
   for delete to authenticated using (public.is_starkworth_admin());
 
 -- ===== workers =====
+drop policy if exists "anon can submit worker registrations" on public.workers;
 create policy "anon can submit worker registrations" on public.workers
   for insert to anon with check (true);
 
+drop policy if exists "admins can read workers" on public.workers;
 create policy "admins can read workers" on public.workers
   for select to authenticated using (public.is_starkworth_admin());
 
+drop policy if exists "workers can read own row" on public.workers;
 create policy "workers can read own row" on public.workers
   for select to authenticated using (auth.jwt() ->> 'email' = email);
 
+drop policy if exists "admins can update workers" on public.workers;
 create policy "admins can update workers" on public.workers
   for update to authenticated using (public.is_starkworth_admin());
 
+drop policy if exists "admins can delete workers" on public.workers;
 create policy "admins can delete workers" on public.workers
   for delete to authenticated using (public.is_starkworth_admin());
 
 -- ===== contacts =====
+drop policy if exists "anon can submit contact messages" on public.contacts;
 create policy "anon can submit contact messages" on public.contacts
   for insert to anon with check (true);
 
+drop policy if exists "admins can read contacts" on public.contacts;
 create policy "admins can read contacts" on public.contacts
   for select to authenticated using (public.is_starkworth_admin());
 
+drop policy if exists "admins can delete contacts" on public.contacts;
 create policy "admins can delete contacts" on public.contacts
   for delete to authenticated using (public.is_starkworth_admin());

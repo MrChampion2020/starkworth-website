@@ -348,7 +348,14 @@
       btn.textContent = 'Creating account...';
 
       try {
-        const { ok, data } = await signUpWithPassword(email, password);
+        if (!getStoredReferralCode()) {
+          errorText.textContent = 'A referral link is required to create an account owner account.';
+          errorDiv.style.display = 'flex';
+          btn.disabled = false;
+          btn.textContent = 'Create Account & Continue';
+          return;
+        }
+        const { ok, data } = await signUpWithPassword(email, password, { portal_type: 'owner', referred_by_code: getStoredReferralCode() });
 
         if (ok) {
           const referralCode = getStoredReferralCode();

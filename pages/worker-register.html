@@ -343,6 +343,10 @@
     alert('Please tick the agreement checkbox before submitting.');
     return;
   }
+  if (!getStoredReferralCode()) {
+    alert('A referral link is required to complete worker registration. Please use a valid referral link.');
+    return;
+  }
 
   const registerBtn = document.getElementById('registerBtn');
   registerBtn.disabled = true;

@@ -135,7 +135,6 @@ window.addPasswordRevealControls();
     const security = document.createElement('section');
     security.className = 'dashboard-security-card';
     security.innerHTML = '<div><span class="dashboard-card-label">Account security</span><h3>Password settings</h3><p>Change your password while signed in, or send a recovery link to your registered email.</p></div><form class="dashboard-password-form"><label>New password<input type="password" name="newPassword" minlength="6" required placeholder="At least 6 characters"></label><label>Confirm password<input type="password" name="confirmPassword" minlength="6" required placeholder="Repeat new password"></label><button class="btn btn-primary" type="submit">Change password</button><button class="dashboard-recovery" type="button">Email recovery link</button><span class="dashboard-form-status" role="status"></span></form>';
-    mainPanel.insertBefore(security, mainPanel.children[1] || null);
     window.addPasswordRevealControls();
     security.querySelector('form').addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -157,6 +156,7 @@ window.addPasswordRevealControls();
     referralPanel.className = 'history-panel dashboard-referral-panel';
     referralPanel.innerHTML = '<h3>Referral activity</h3><p class="dashboard-panel-note">People who joined using your referral link appear here after onboarding.</p><div class="dashboard-referral-summary">Loading referral activity...</div><div class="dashboard-referral-list"></div>';
     if (!(role === 'Affiliate' && content.querySelector('#referrals'))) mainPanel.appendChild(referralPanel);
+    mainPanel.appendChild(security);
     if (typeof fetchAffiliateReferrals === 'function') fetchAffiliateReferrals(session.email).then(rows => {
       const summary = referralPanel.querySelector('.dashboard-referral-summary');
       const list = referralPanel.querySelector('.dashboard-referral-list');

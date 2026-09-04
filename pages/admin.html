@@ -306,6 +306,10 @@
             </select>
           </div>
           <div class="form-group">
+            <label>Direct referral %</label>
+            <input type="number" id="ruleDirectPct" min="0" max="100" step="0.01" placeholder="5.00" />
+          </div>
+          <div class="form-group">
             <label>2nd tree enabled</label>
             <select id="ruleSecondTreeEnabled">
               <option value="false">Disabled</option>
@@ -341,6 +345,20 @@
           <div class="form-group" style="grid-column:1 / -1;"><label>Notes</label><textarea id="earningNotes" rows="2" placeholder="Optional earning note"></textarea></div>
         </div>
         <div class="settings-actions"><button class="btn btn-primary" type="button" onclick="allocateEarningsForm()">Allocate earnings</button><span id="earningAllocationStatus" style="font-size:13px;color:var(--text-muted);">Choose an eligible period and account rate.</span></div>
+      </div>
+
+      <div class="settings-panel" style="margin-top:20px;">
+        <h3>Link an existing user to a referrer</h3>
+        <p>Use this for users who were onboarded before referral tracking was enabled. Leave the code blank to use the referrer’s current code.</p>
+        <div class="settings-grid">
+          <div class="form-group"><label>Referrer email</label><input type="email" id="manualReferrerEmail" placeholder="referrer@example.com" /></div>
+          <div class="form-group"><label>Referrer portal</label><select id="manualReferrerPortal"><option value="affiliate">Affiliate</option><option value="worker">Worker</option><option value="owner">Account Owner</option></select></div>
+          <div class="form-group"><label>Existing user email</label><input type="email" id="manualReferredEmail" placeholder="user@example.com" /></div>
+          <div class="form-group"><label>Existing user portal</label><select id="manualReferredPortal"><option value="worker">Worker</option><option value="owner">Account Owner</option><option value="affiliate">Affiliate</option></select></div>
+          <div class="form-group"><label>Referral code (optional)</label><input type="text" id="manualReferralCode" placeholder="Uses referrer code when blank" /></div>
+          <div class="form-group"><label>Note</label><input type="text" id="manualReferralNote" placeholder="Reason for manual link" /></div>
+        </div>
+        <div class="settings-actions"><button class="btn btn-primary" type="button" onclick="linkExistingReferralForm()">Link referral</button><span id="manualReferralStatus" style="font-size:13px;color:var(--text-muted);">Admin-only referral correction.</span></div>
       </div>
 
       <div class="settings-panel" style="margin-top:20px;">
@@ -432,11 +450,11 @@
           <table class="admin-table">
             <thead>
               <tr>
-                <th>Referrer</th><th>Portal</th><th>2nd tree</th><th>Rate</th><th>Updated</th>
+                <th>Referrer</th><th>Portal</th><th>Direct</th><th>2nd tree</th><th>Rate</th><th>Updated</th>
               </tr>
             </thead>
             <tbody id="affiliateRulesTableBody">
-              <tr><td colspan="5" class="admin-table-empty">No referrer overrides yet.</td></tr>
+              <tr><td colspan="6" class="admin-table-empty">No referrer overrides yet.</td></tr>
             </tbody>
           </table>
         </div>
@@ -850,6 +868,24 @@
       if (result.ok) { document.getElementById('earningGrossAmount').value = ''; document.getElementById('earningNotes').value = ''; loadAdminData(); }
     }
 
+    async function linkExistingReferralForm() {
+      const status = document.getElementById('manualReferralStatus');
+      const referrerEmail = document.getElementById('manualReferrerEmail').value.trim();
+      const referredEmail = document.getElementById('manualReferredEmail').value.trim();
+      if (!referrerEmail || !referredEmail) { status.textContent = 'Enter both email addresses.'; return; }
+      status.textContent = 'Linking referral...';
+      const result = await linkExistingReferral({
+        referrer_email: referrerEmail,
+        referrer_portal_type: document.getElementById('manualReferrerPortal').value,
+        referred_email: referredEmail,
+        referred_portal_type: document.getElementById('manualReferredPortal').value,
+        referral_code: document.getElementById('manualReferralCode').value.trim(),
+        notes: document.getElementById('manualReferralNote').value.trim()
+      });
+      status.textContent = result.ok ? 'Referral linked successfully.' : (result.data?.message || result.data?.hint || 'Could not link referral.');
+      if (result.ok) { document.getElementById('manualReferralCode').value = ''; document.getElementById('manualReferralNote').value = ''; loadAdminData(); }
+    }
+
     async function saveTaskAssignmentForm() {
       const email = document.getElementById('taskEmail').value.trim();
       const portalType = document.getElementById('taskPortalType').value;
@@ -917,6 +953,7 @@
       const referrerPortalType = document.getElementById('ruleReferrerPortalType').value;
       const secondTreeEnabled = document.getElementById('ruleSecondTreeEnabled').value === 'true';
       const secondTreePct = Number(document.getElementById('ruleSecondTreePct').value || 0);
+      const directPct = Number(document.getElementById('ruleDirectPct').value || 5);
       const notes = document.getElementById('ruleNotes').value.trim();
       const status = document.getElementById('ruleSettingsStatus');
 
@@ -939,6 +976,7 @@
           referrer_portal_type: referrerPortalType,
           second_tree_enabled: secondTreeEnabled,
           second_tree_pct: secondTreePct,
+          direct_rate_pct: directPct,
           notes
         })
       });
@@ -1032,10 +1070,11 @@
         <tr>
           <td>${escapeHtml(row.referrer_email)}</td>
           <td>${escapeHtml(row.referrer_portal_type)}</td>
+          <td>${escapeHtml(String(row.direct_rate_pct ?? 5))}%</td>
           <td>${row.second_tree_enabled ? 'Enabled' : 'Disabled'}</td>
           <td>${escapeHtml(String(row.second_tree_pct || 0))}%</td>
           <td>${escapeHtml(formatDate(row.updated_at))}</td>
-        </tr>`, 5);
+        </tr>`, 6);
 
       // Recent agreements
       const recentA = document.getElementById('recentAgreementsEmpty');

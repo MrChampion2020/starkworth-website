@@ -341,7 +341,7 @@
 
       document.getElementById('affiliateArea').style.display = 'block';
       document.getElementById('weeklyValueCard').textContent = formatMoney(latestEarning.allocated_amount_usd ?? latestEarning.weekly_value_usd ?? worker.weekly_value_usd ?? 0);
-      document.getElementById('directRateCard').textContent = `${Number(settings?.default_direct_pct || 5)}%`;
+      document.getElementById('directRateCard').textContent = `${Number(referrerRule?.direct_rate_pct ?? settings?.default_direct_pct ?? 5)}%`;
       document.getElementById('secondTreeCard').textContent = referrerRule
         ? (referrerRule.second_tree_enabled ? `${Number(referrerRule.second_tree_pct || 0)}% enabled` : 'Disabled')
         : (settings?.second_tree_enabled ? `${Number(settings.second_tree_pct || 0)}% enabled` : 'Disabled');
