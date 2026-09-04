@@ -2101,6 +2101,12 @@ body.modal-open {
   transform: translateY(-2px);
 }
 .footer-social-link svg { width: 17px; height: 17px; }
+.footer-social-link.social-tiktok { color: #25f4ee; }
+.footer-social-link.social-instagram { color: #e1306c; }
+.footer-social-link.social-facebook { color: #1877f2; }
+.footer-social-link.social-youtube { color: #ff0000; }
+.footer-social-link.social-linkedin { color: #0a66c2; }
+.footer-social-link.social-x { color: #111; }
 
 /* ===========================
    GUIDES PAGE

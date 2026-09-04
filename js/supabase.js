@@ -139,6 +139,26 @@ async function fetchAffiliateReferralForReferred(email, portalType) {
   return rows[0] || null;
 }
 
+async function fetchStarkAcTrainee(email) {
+  const rows = await fetchTableRows('starkac_trainees', `email=eq.${escapeQuery(email)}&limit=1`);
+  return rows[0] || null;
+}
+
+async function fetchStarkAcActivity(email) {
+  return fetchTableRows('starkac_trainee_activity', `trainee_email=eq.${escapeQuery(email)}&order=activity_date.desc,created_at.desc`);
+}
+
+async function fetchStarkAcTraineesAll() {
+  return fetchTableRows('starkac_trainees', 'order=created_at.desc');
+}
+
+async function saveStarkAcActivity(data) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/starkac_trainee_activity`, {
+    method: 'POST', headers: { ...getAuthHeaders(), Prefer: 'return=minimal' }, body: JSON.stringify(data)
+  });
+  return response.ok;
+}
+
 async function allocateAccountEarnings(data) {
   const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/allocate_account_earnings`, {
     method: 'POST',

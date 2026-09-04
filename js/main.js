@@ -49,6 +49,21 @@ const mobileMenu = document.getElementById('mobileMenu');
   };
 })();
 
+// Keep the footer social network list and platform colours consistent site-wide.
+(function enhanceFooterSocials() {
+  const socials = [
+    ['TikTok', 'https://vm.tiktok.com/ZS9BEXVaKcq4F-GNRFc/', '<path d="M15 4c.5 2.5 2 4 4.5 4.5M10 10.5v7a3.5 3.5 0 1 1-3-3.46"/>', 'social-tiktok'],
+    ['Instagram', 'https://www.instagram.com/starkworthllc?igsi=eDI4enNmamwxYjJk', '<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>', 'social-instagram'],
+    ['Facebook', 'https://www.facebook.com/starkworth', '<path d="M14 21v-8h2.7l.4-3H14V8.1c0-.9.3-1.5 1.6-1.5H17V3.9c-.7-.1-1.4-.2-2.2-.2-2.7 0-4.5 1.6-4.5 4.6V10H7.5v3H10v8"/>', 'social-facebook'],
+    ['YouTube', 'https://youtube.com/@sammyjstark?si=xBjfkcgUnYwTU5sQ', '<rect x="3" y="6" width="18" height="12" rx="4"/><path d="m10 9 5 3-5 3V9Z" fill="currentColor" stroke="none"/>', 'social-youtube'],
+    ['LinkedIn', 'https://www.linkedin.com/company/starkworth/', '<path d="M6 9v9M6 6v.1M10 18v-5a3 3 0 0 1 6 0v5M10 10v8"/>', 'social-linkedin'],
+    ['X', 'https://x.com/starkworth', '<path d="m5 4 14 16M19 4 5 20"/>', 'social-x']
+  ];
+  document.querySelectorAll('.footer-socials').forEach((container) => {
+    container.innerHTML = socials.map(([label, href, icon, className]) => `<a href="${href}" class="footer-social-link ${className}" aria-label="Starkworth on ${label}" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icon}</svg></a>`).join('');
+  });
+})();
+
 // Add accessible show/hide controls without changing the existing form markup.
 window.addPasswordRevealControls = function addPasswordRevealControls() {
   document.querySelectorAll('input[type="password"]').forEach((input) => {
