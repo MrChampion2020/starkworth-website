@@ -90,6 +90,17 @@ window.addPasswordRevealControls();
   sidebar.className = 'dashboard-sidebar';
   sidebar.innerHTML = `<div class="dashboard-sidebar-brand"><span class="dashboard-sidebar-kicker">Starkworth</span><strong>${role} workspace</strong></div><nav aria-label="Dashboard sections"><a href="#overview" class="dashboard-nav-link active" data-target="overview">Overview</a>${role === 'Affiliate' ? '<a href="#referrals" class="dashboard-nav-link" data-target="referrals">Referrals</a>' : ''}<a href="#earnings" class="dashboard-nav-link" data-target="earnings">Earnings</a><a href="#payouts" class="dashboard-nav-link" data-target="payouts">Payout history</a><a href="#withdrawals" class="dashboard-nav-link" data-target="withdrawals">Withdrawals</a><a href="#tasks" class="dashboard-nav-link" data-target="tasks">Task schedule</a><a href="support.html#chatWrapper" class="dashboard-nav-link">Support &amp; Chat</a></nav><div class="dashboard-sidebar-footer"><span class="dashboard-sync-dot"></span>Live sync enabled<button type="button" class="dashboard-refresh" onclick="window.location.reload()">Refresh data</button><button type="button" class="dashboard-logout">Log out</button></div>`;
   content.insertBefore(sidebar, content.firstChild);
+  const menuToggle = document.createElement('button');
+  menuToggle.type = 'button';
+  menuToggle.className = 'dashboard-menu-toggle';
+  menuToggle.setAttribute('aria-expanded', 'false');
+  menuToggle.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>Dashboard menu</span>';
+  const dashboardNavContainer = document.querySelector('.nav-container');
+  dashboardNavContainer?.insertBefore(menuToggle, dashboardNavContainer.querySelector('.profile-nav'));
+  menuToggle.addEventListener('click', () => {
+    const open = sidebar.classList.toggle('dashboard-sidebar-open');
+    menuToggle.setAttribute('aria-expanded', String(open));
+  });
 
   const panels = [...content.querySelectorAll('.history-panel')];
   const targets = ['earnings', 'payouts', 'withdrawals', 'commissions', 'tasks'];
@@ -99,6 +110,8 @@ window.addPasswordRevealControls();
   const links = sidebar.querySelectorAll('.dashboard-nav-link[data-target]');
   links.forEach((link) => link.addEventListener('click', () => {
     links.forEach((item) => item.classList.toggle('active', item === link));
+    sidebar.classList.remove('dashboard-sidebar-open');
+    menuToggle.setAttribute('aria-expanded', 'false');
   }));
   const sectionObserver = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
