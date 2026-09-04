@@ -19,7 +19,7 @@ const mobileMenu = document.getElementById('mobileMenu');
   const portalType = sessionStorage.getItem('sw_portal_type');
   const dashboardHref = portalType === 'worker' ? `${pageRoot}worker-dashboard.html` : portalType === 'affiliate' ? `${pageRoot}affiliate-dashboard.html` : `${pageRoot}client-dashboard.html`;
   const sessionName = sessionStorage.getItem('sw_user_name') || '';
-  wrapper.innerHTML = `<button class="profile-nav-trigger" type="button" aria-expanded="false" aria-controls="profilePortalMenu" aria-label="Open profile menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg><span>${sessionEmail ? (sessionName || 'Account') : 'Login'}</span></button><div class="profile-portal-menu" id="profilePortalMenu" hidden>${sessionEmail ? `<a class="profile-dashboard-link" href="${dashboardHref}">${sessionName || 'Account'}</a>` : '<span class="profile-menu-title">Choose a portal</span><a href="' + pageRoot + 'client-portal.html">Account Owner</a><a href="' + pageRoot + 'worker-login.html">Worker</a><a href="' + pageRoot + 'affiliate.html">Affiliate</a>'}</div>`;
+  wrapper.innerHTML = `<button class="profile-nav-trigger" type="button" aria-expanded="false" aria-controls="profilePortalMenu" aria-label="Open profile menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg><span>${sessionEmail ? 'Account' : 'Login'}</span></button><div class="profile-portal-menu" id="profilePortalMenu" hidden>${sessionEmail ? `<a class="profile-dashboard-link" href="${dashboardHref}">${sessionName || 'Account'}</a>` : '<span class="profile-menu-title">Choose a portal</span><a href="' + pageRoot + 'client-portal.html">Account Owner</a><a href="' + pageRoot + 'worker-login.html">Worker</a><a href="' + pageRoot + 'affiliate.html">Affiliate</a>'}</div>`;
   navContainer.appendChild(wrapper);
   const trigger = wrapper.querySelector('.profile-nav-trigger');
   const menu = wrapper.querySelector('.profile-portal-menu');
@@ -43,7 +43,7 @@ const mobileMenu = document.getElementById('mobileMenu');
   window.updateProfileMenuName = (name) => {
     if (!name) return;
     sessionStorage.setItem('sw_user_name', name);
-    wrapper.querySelector('.profile-nav-trigger span').textContent = name;
+    wrapper.querySelector('.profile-nav-trigger span').textContent = 'Account';
     const link = wrapper.querySelector('.profile-dashboard-link');
     if (link) link.textContent = name;
   };
@@ -96,7 +96,7 @@ window.addPasswordRevealControls();
   menuToggle.setAttribute('aria-expanded', 'false');
   menuToggle.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>Dashboard menu</span>';
   const dashboardNavContainer = document.querySelector('.nav-container');
-  dashboardNavContainer?.insertBefore(menuToggle, dashboardNavContainer.querySelector('.profile-nav'));
+  dashboardNavContainer?.appendChild(menuToggle);
   menuToggle.addEventListener('click', () => {
     const open = sidebar.classList.toggle('dashboard-sidebar-open');
     menuToggle.setAttribute('aria-expanded', String(open));
