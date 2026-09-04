@@ -323,6 +323,7 @@
       }
 
       document.getElementById('dName').textContent = worker.first_name + ' ' + worker.last_name;
+      window.updateProfileMenuName?.(worker.first_name + ' ' + worker.last_name);
       document.getElementById('dEmail').textContent = worker.email;
       document.getElementById('dCountry').textContent = worker.country || '-';
       document.getElementById('dPayMethod').textContent = worker.payment_method || '-';

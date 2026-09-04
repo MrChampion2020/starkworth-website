@@ -48,6 +48,7 @@
       if (!profile || profile.status !== 'active') { signOut(); location.href = 'affiliate.html'; return; }
       document.getElementById('affiliateContent').style.display = 'block';
       document.getElementById('affiliateName').textContent = profile.full_name;
+      window.updateProfileMenuName?.(profile.full_name || 'Affiliate');
       document.getElementById('affiliateEmail').textContent = profile.email;
       document.getElementById('affiliateLink').value = buildReferralLink('affiliate.html?role=affiliate#register', profile.referral_code);
       document.getElementById('ownerReferralLink').value = buildReferralLink('client-portal.html?role=owner', profile.referral_code);

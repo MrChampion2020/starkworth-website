@@ -427,6 +427,7 @@ function signOut() {
   sessionStorage.removeItem('sw_access_token');
   sessionStorage.removeItem('sw_user_email');
   sessionStorage.removeItem('sw_portal_type');
+  sessionStorage.removeItem('sw_user_name');
 }
 
 async function resetPassword(email) {

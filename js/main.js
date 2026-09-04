@@ -16,7 +16,10 @@ const mobileMenu = document.getElementById('mobileMenu');
   const wrapper = document.createElement('div');
   wrapper.className = 'profile-nav';
   const sessionEmail = sessionStorage.getItem('sw_user_email');
-  wrapper.innerHTML = `<button class="profile-nav-trigger" type="button" aria-expanded="false" aria-controls="profilePortalMenu" aria-label="Open profile menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg><span>${sessionEmail ? 'Account' : 'Login'}</span></button><div class="profile-portal-menu" id="profilePortalMenu" hidden>${sessionEmail ? `<span class="profile-menu-title">Signed in as<br><strong>${sessionEmail}</strong></span><button type="button" class="profile-signout">Log out</button>` : '<span class="profile-menu-title">Choose a portal</span><a href="' + pageRoot + 'client-portal.html">Account Owner</a><a href="' + pageRoot + 'worker-login.html">Worker</a><a href="' + pageRoot + 'affiliate.html">Affiliate</a>'}</div>`;
+  const portalType = sessionStorage.getItem('sw_portal_type');
+  const dashboardHref = portalType === 'worker' ? `${pageRoot}worker-dashboard.html` : portalType === 'affiliate' ? `${pageRoot}affiliate-dashboard.html` : `${pageRoot}client-dashboard.html`;
+  const sessionName = sessionStorage.getItem('sw_user_name') || '';
+  wrapper.innerHTML = `<button class="profile-nav-trigger" type="button" aria-expanded="false" aria-controls="profilePortalMenu" aria-label="Open profile menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg><span>${sessionEmail ? (sessionName || 'Account') : 'Login'}</span></button><div class="profile-portal-menu" id="profilePortalMenu" hidden>${sessionEmail ? `<a class="profile-dashboard-link" href="${dashboardHref}">${sessionName || 'Account'}</a>` : '<span class="profile-menu-title">Choose a portal</span><a href="' + pageRoot + 'client-portal.html">Account Owner</a><a href="' + pageRoot + 'worker-login.html">Worker</a><a href="' + pageRoot + 'affiliate.html">Affiliate</a>'}</div>`;
   navContainer.appendChild(wrapper);
   const trigger = wrapper.querySelector('.profile-nav-trigger');
   const menu = wrapper.querySelector('.profile-portal-menu');
@@ -36,6 +39,34 @@ const mobileMenu = document.getElementById('mobileMenu');
       trigger.setAttribute('aria-expanded', 'false');
       menu.hidden = true;
     }
+  });
+  window.updateProfileMenuName = (name) => {
+    if (!name) return;
+    sessionStorage.setItem('sw_user_name', name);
+    wrapper.querySelector('.profile-nav-trigger span').textContent = name;
+    const link = wrapper.querySelector('.profile-dashboard-link');
+    if (link) link.textContent = name;
+  };
+})();
+
+// Add accessible show/hide controls without changing the existing form markup.
+(function addPasswordRevealControls() {
+  document.querySelectorAll('input[type="password"]').forEach((input) => {
+    if (input.parentElement?.classList.contains('password-field')) return;
+    const field = document.createElement('div');
+    field.className = 'password-field';
+    input.parentNode.insertBefore(field, input);
+    field.appendChild(input);
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'password-reveal'; button.textContent = 'Show';
+    button.setAttribute('aria-label', 'Show password');
+    button.addEventListener('click', () => {
+      const visible = input.type === 'text';
+      input.type = visible ? 'password' : 'text';
+      button.textContent = visible ? 'Show' : 'Hide';
+      button.setAttribute('aria-label', visible ? 'Show password' : 'Hide password');
+    });
+    field.appendChild(button);
   });
 })();
 
@@ -65,6 +96,13 @@ const mobileMenu = document.getElementById('mobileMenu');
   links.forEach((link) => link.addEventListener('click', () => {
     links.forEach((item) => item.classList.toggle('active', item === link));
   }));
+  const sectionObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      links.forEach((link) => link.classList.toggle('active', link.dataset.target === entry.target.id));
+    });
+  }, { rootMargin: '-18% 0px -62% 0px', threshold: 0 });
+  links.forEach((link) => { const target = document.getElementById(link.dataset.target); if (target) sectionObserver.observe(target); });
   sidebar.querySelector('.dashboard-logout').addEventListener('click', () => {
     if (typeof signOut === 'function') signOut();
     else { sessionStorage.clear(); }

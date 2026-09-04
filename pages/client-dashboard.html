@@ -328,6 +328,7 @@
       }
 
       document.getElementById('dName').textContent = agreement.full_name || '-';
+      window.updateProfileMenuName?.(agreement.full_name || 'Account Owner');
       document.getElementById('dEmail').textContent = agreement.email || '-';
       document.getElementById('dAccountType').textContent = (agreement.notes || '').startsWith('Account type:')
         ? agreement.notes.split('.')[0].replace('Account type:', '').trim()
