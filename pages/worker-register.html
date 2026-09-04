@@ -356,6 +356,7 @@
       registerBtn.textContent = 'Submit Registration';
       return;
     }
+    setSessionPortalType('worker');
 
     const saved = await saveWorker({
       first_name: firstName,

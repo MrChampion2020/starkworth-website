@@ -328,6 +328,22 @@
       </div>
 
       <div class="settings-panel" style="margin-top:20px;">
+        <h3>Allocate account earnings</h3>
+        <p>Record the gross amount for an eligible period and apply the account's assigned percentage. Direct referral commissions are created automatically.</p>
+        <div class="settings-grid">
+          <div class="form-group"><label>User email</label><input type="email" id="earningEmail" placeholder="person@example.com" /></div>
+          <div class="form-group"><label>Portal type</label><select id="earningPortalType"><option value="worker">Worker</option><option value="owner">Account Owner</option><option value="affiliate">Affiliate</option></select></div>
+          <div class="form-group"><label>Earning period</label><select id="earningPeriodType"><option value="weekly">Weekly</option><option value="biweekly">Biweekly</option><option value="monthly">Monthly</option></select></div>
+          <div class="form-group"><label>Gross earnings (USD)</label><input type="number" id="earningGrossAmount" min="0" step="0.01" placeholder="0.00" /></div>
+          <div class="form-group"><label>Assigned account rate (%)</label><input type="number" id="earningAccountRate" min="0" max="100" step="0.01" value="100" /></div>
+          <div class="form-group"><label>Period start</label><input type="date" id="earningPeriodStart" /></div>
+          <div class="form-group"><label>Period end</label><input type="date" id="earningPeriodEnd" /></div>
+          <div class="form-group" style="grid-column:1 / -1;"><label>Notes</label><textarea id="earningNotes" rows="2" placeholder="Optional earning note"></textarea></div>
+        </div>
+        <div class="settings-actions"><button class="btn btn-primary" type="button" onclick="allocateEarningsForm()">Allocate earnings</button><span id="earningAllocationStatus" style="font-size:13px;color:var(--text-muted);">Choose an eligible period and account rate.</span></div>
+      </div>
+
+      <div class="settings-panel" style="margin-top:20px;">
         <h3>Create task assignment</h3>
         <p>Add a weekly task schedule with start/end dates and the daily time slots assigned to that week.</p>
         <div class="settings-grid">
@@ -351,6 +367,7 @@
             <label>Weekly value (USD)</label>
             <input type="number" id="taskWeeklyValue" min="0" step="0.01" placeholder="0.00" />
           </div>
+          <div class="form-group"><label>Earning period</label><select id="taskPeriodType"><option value="weekly">Weekly</option><option value="biweekly">Biweekly</option><option value="monthly">Monthly</option></select></div>
           <div class="form-group">
             <label>Week start</label>
             <input type="date" id="taskWeekStart" />
@@ -396,7 +413,7 @@
           <table class="admin-table">
             <thead>
               <tr>
-                <th>User</th><th>Portal</th><th>Task</th><th>Week</th><th>Start</th><th>End</th><th>Daily slots</th><th>USD</th>
+                <th>User</th><th>Portal</th><th>Task</th><th>Period</th><th>Week</th><th>Start</th><th>End</th><th>Daily slots</th><th>USD</th>
               </tr>
             </thead>
             <tbody id="affiliateTasksTableBody">
@@ -435,10 +452,10 @@
             <table class="admin-table">
               <thead>
                 <tr>
-                  <th>User</th><th>Portal</th><th>Week</th><th>USD</th><th>Status</th>
+                  <th>User</th><th>Portal</th><th>Period</th><th>Week</th><th>USD</th><th>Status</th>
                 </tr>
               </thead>
-              <tbody id="affiliateEarningsTableBody">
+          <tbody id="affiliateEarningsTableBody">
                 <tr><td colspan="5" class="admin-table-empty">No earning history yet.</td></tr>
               </tbody>
             </table>
@@ -812,6 +829,27 @@
       }
     }
 
+    async function allocateEarningsForm() {
+      const status = document.getElementById('earningAllocationStatus');
+      const email = document.getElementById('earningEmail').value.trim();
+      const periodStart = document.getElementById('earningPeriodStart').value;
+      const periodEnd = document.getElementById('earningPeriodEnd').value;
+      if (!email || !periodStart || !periodEnd) { status.textContent = 'Please enter the user email and earning dates.'; return; }
+      status.textContent = 'Allocating...';
+      const result = await allocateAccountEarnings({
+        email,
+        portal_type: document.getElementById('earningPortalType').value,
+        period_type: document.getElementById('earningPeriodType').value,
+        period_start: periodStart,
+        period_end: periodEnd,
+        gross_amount_usd: document.getElementById('earningGrossAmount').value,
+        account_rate_pct: document.getElementById('earningAccountRate').value,
+        notes: document.getElementById('earningNotes').value.trim()
+      });
+      status.textContent = result.ok ? `Allocated ${formatMoney(result.data?.allocated_amount_usd || 0)}.` : 'Could not allocate earnings.';
+      if (result.ok) { document.getElementById('earningGrossAmount').value = ''; document.getElementById('earningNotes').value = ''; loadAdminData(); }
+    }
+
     async function saveTaskAssignmentForm() {
       const email = document.getElementById('taskEmail').value.trim();
       const portalType = document.getElementById('taskPortalType').value;
@@ -823,6 +861,7 @@
       const taskEndDate = document.getElementById('taskEndDate').value;
       const dailySlotsRaw = document.getElementById('taskDailySlots').value.trim();
       const statusValue = document.getElementById('taskStatus').value;
+      const periodType = document.getElementById('taskPeriodType').value;
       const status = document.getElementById('taskAssignmentStatus');
 
       if (!email || !taskName || !weekStart || !weekEnd || !taskStartDate || !taskEndDate) {
@@ -859,6 +898,7 @@
           task_end_date: taskEndDate,
           daily_time_slots: dailyTimeSlots,
           weekly_value_usd: weeklyValueUsd,
+          period_type: periodType,
           status: statusValue
         })
       });
@@ -943,21 +983,23 @@
           <td>${escapeHtml(row.email)}</td>
           <td>${escapeHtml(row.portal_type)}</td>
           <td>${escapeHtml(row.task_name)}</td>
+          <td>${escapeHtml(row.period_type || 'weekly')}</td>
           <td>${escapeHtml(formatDate(row.week_start))} - ${escapeHtml(formatDate(row.week_end))}</td>
           <td>${escapeHtml(formatDate(row.task_start_date))}</td>
           <td>${escapeHtml(formatDate(row.task_end_date))}</td>
           <td>${escapeHtml(slotsToText(row.daily_time_slots))}</td>
           <td>${escapeHtml(formatMoney(row.weekly_value_usd))}</td>
-        </tr>`, 8);
+        </tr>`, 9);
 
       renderTableBody('affiliateEarningsTableBody', affiliateEarnings, 'No earning history yet.', row => `
         <tr>
           <td>${escapeHtml(row.email)}</td>
           <td>${escapeHtml(row.portal_type)}</td>
           <td>${escapeHtml(formatDate(row.week_start))} - ${escapeHtml(formatDate(row.week_end))}</td>
-          <td>${escapeHtml(formatMoney(row.weekly_value_usd))}</td>
+          <td>${escapeHtml(formatMoney(row.allocated_amount_usd ?? row.weekly_value_usd))}</td>
+          <td>${escapeHtml(row.period_type || 'weekly')}</td>
           <td>${escapeHtml(row.status || 'pending')}</td>
-        </tr>`, 5);
+        </tr>`, 6);
 
       renderTableBody('affiliateCommissionsTableBody', affiliateCommissions, 'No commissions yet.', row => `
         <tr>

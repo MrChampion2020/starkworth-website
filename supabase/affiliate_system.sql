@@ -21,6 +21,7 @@ alter table if exists public.workers
   add column if not exists referral_code text,
   add column if not exists referred_by_code text,
   add column if not exists weekly_value_usd numeric(12,2) default 0,
+  add column if not exists earning_period text not null default 'weekly',
   add column if not exists task_start_date date,
   add column if not exists task_end_date date,
   add column if not exists daily_time_slots jsonb not null default '[]'::jsonb;
@@ -29,6 +30,7 @@ alter table if exists public.agreements
   add column if not exists referral_code text,
   add column if not exists referred_by_code text,
   add column if not exists weekly_value_usd numeric(12,2) default 0,
+  add column if not exists earning_period text not null default 'weekly',
   add column if not exists task_start_date date,
   add column if not exists task_end_date date,
   add column if not exists daily_time_slots jsonb not null default '[]'::jsonb;
@@ -119,6 +121,23 @@ create table if not exists public.affiliate_accounts (
 create index if not exists affiliate_accounts_referred_by_code_idx
   on public.affiliate_accounts (referred_by_code);
 
+create table if not exists public.affiliate_referrals (
+  id uuid primary key default gen_random_uuid(),
+  referrer_email text not null,
+  referrer_portal_type text not null check (referrer_portal_type in ('worker', 'owner', 'affiliate')),
+  referred_email text not null,
+  referred_portal_type text not null check (referred_portal_type in ('worker', 'owner', 'affiliate')),
+  referral_code text not null,
+  status text not null default 'captured' check (status in ('captured', 'onboarded', 'eligible', 'inactive')),
+  captured_at timestamptz not null default now(),
+  onboarded_at timestamptz,
+  updated_at timestamptz not null default now(),
+  notes text
+);
+
+create unique index if not exists affiliate_referrals_unique_idx on public.affiliate_referrals (referrer_email, referred_email, referred_portal_type);
+create index if not exists affiliate_referrals_referrer_idx on public.affiliate_referrals (referrer_email, captured_at desc);
+
 create or replace function public.generate_affiliate_referral_code()
 returns text
 language plpgsql
@@ -136,6 +155,22 @@ begin
 end;
 $$;
 
+create or replace function public.record_affiliate_referral(p_referred_email text, p_referred_portal_type text, p_referral_code text)
+returns void language plpgsql security definer set search_path = public
+as $$
+declare referrer record;
+begin
+  if nullif(trim(p_referral_code), '') is null then return; end if;
+  select email, 'affiliate'::text as portal_type into referrer from public.affiliate_accounts where referral_code = p_referral_code limit 1;
+  if referrer.email is null then select email, 'worker'::text as portal_type into referrer from public.workers where referral_code = p_referral_code limit 1; end if;
+  if referrer.email is null then select email, 'owner'::text as portal_type into referrer from public.agreements where referral_code = p_referral_code limit 1; end if;
+  if referrer.email is null or lower(referrer.email) = lower(p_referred_email) then return; end if;
+  insert into public.affiliate_referrals (referrer_email, referrer_portal_type, referred_email, referred_portal_type, referral_code)
+  values (lower(referrer.email), referrer.portal_type, lower(p_referred_email), p_referred_portal_type, p_referral_code)
+  on conflict (referrer_email, referred_email, referred_portal_type) do update set referral_code = excluded.referral_code, updated_at = now();
+end;
+$$;
+
 create or replace function public.create_affiliate_account_profile()
 returns trigger
 language plpgsql
@@ -146,6 +181,7 @@ begin
     insert into public.affiliate_accounts (email, full_name, referral_code, referred_by_code)
     values (lower(new.email), coalesce(nullif(new.raw_user_meta_data ->> 'full_name', ''), split_part(new.email, '@', 1)), public.generate_affiliate_referral_code(), nullif(new.raw_user_meta_data ->> 'referred_by_code', ''))
     on conflict (email) do nothing;
+    perform public.record_affiliate_referral(lower(new.email), 'affiliate', nullif(new.raw_user_meta_data ->> 'referred_by_code', ''));
   end if;
   return new;
 end;
@@ -155,6 +191,43 @@ drop trigger if exists on_auth_user_created_affiliate on auth.users;
 create trigger on_auth_user_created_affiliate
   after insert on auth.users
   for each row execute function public.create_affiliate_account_profile();
+
+create or replace function public.record_worker_referral()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  perform public.record_affiliate_referral(lower(new.email), 'worker', new.referred_by_code);
+  return new;
+end;
+$$;
+
+drop trigger if exists workers_record_affiliate_referral on public.workers;
+create trigger workers_record_affiliate_referral after insert on public.workers
+  for each row execute function public.record_worker_referral();
+
+create or replace function public.record_owner_referral()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  perform public.record_affiliate_referral(lower(new.email), 'owner', new.referred_by_code);
+  return new;
+end;
+$$;
+
+drop trigger if exists agreements_record_affiliate_referral on public.agreements;
+create trigger agreements_record_affiliate_referral after insert on public.agreements
+  for each row execute function public.record_owner_referral();
+
+-- Backfill referrals captured before this history table existed.
+do $$
+declare row record;
+begin
+  for row in select email, referred_by_code from public.workers where nullif(referred_by_code, '') is not null loop
+    perform public.record_affiliate_referral(lower(row.email), 'worker', row.referred_by_code);
+  end loop;
+  for row in select email, referred_by_code from public.agreements where nullif(referred_by_code, '') is not null loop
+    perform public.record_affiliate_referral(lower(row.email), 'owner', row.referred_by_code);
+  end loop;
+end;
+$$;
 
 -- Repairs profiles for affiliate users created while the trigger/migration was unavailable.
 create or replace function public.provision_affiliate_profile(
@@ -215,6 +288,10 @@ create table if not exists public.affiliate_earnings (
   week_start date not null,
   week_end date not null,
   weekly_value_usd numeric(12,2) not null default 0,
+  period_type text not null default 'weekly',
+  gross_earnings_usd numeric(12,2) not null default 0,
+  account_rate_pct numeric(5,2) not null default 100,
+  allocated_amount_usd numeric(12,2) not null default 0,
   task_start_date date,
   task_end_date date,
   daily_time_slots jsonb not null default '[]'::jsonb,
@@ -273,6 +350,8 @@ create table if not exists public.affiliate_commissions (
 );
 
 create index if not exists affiliate_commissions_referrer_idx on public.affiliate_commissions (referrer_email, created_at desc);
+create unique index if not exists affiliate_commissions_period_unique_idx
+  on public.affiliate_commissions (referrer_email, referred_email, referred_portal_type, tier, week_start, week_end);
 
 create table if not exists public.weekly_task_assignments (
   id uuid primary key default gen_random_uuid(),
@@ -285,6 +364,7 @@ create table if not exists public.weekly_task_assignments (
   task_end_date date not null,
   daily_time_slots jsonb not null default '[]'::jsonb,
   weekly_value_usd numeric(12,2) not null default 0,
+  period_type text not null default 'weekly',
   status text not null default 'scheduled' check (status in ('scheduled', 'active', 'completed', 'paused')),
   created_at timestamptz not null default now()
 );
@@ -319,6 +399,83 @@ alter table public.affiliate_commissions drop constraint if exists affiliate_com
 alter table public.affiliate_commissions add constraint affiliate_commissions_referred_portal_type_check check (referred_portal_type in ('worker', 'owner', 'affiliate'));
 alter table public.weekly_task_assignments drop constraint if exists weekly_task_assignments_portal_type_check;
 alter table public.weekly_task_assignments add constraint weekly_task_assignments_portal_type_check check (portal_type in ('worker', 'owner', 'affiliate'));
+
+-- Safe upgrades for installations where the history tables already existed.
+alter table public.workers add column if not exists earning_period text not null default 'weekly';
+alter table public.agreements add column if not exists earning_period text not null default 'weekly';
+alter table public.affiliate_earnings add column if not exists period_type text not null default 'weekly';
+alter table public.affiliate_earnings add column if not exists gross_earnings_usd numeric(12,2) not null default 0;
+alter table public.affiliate_earnings add column if not exists account_rate_pct numeric(5,2) not null default 100;
+alter table public.affiliate_earnings add column if not exists allocated_amount_usd numeric(12,2) not null default 0;
+alter table public.weekly_task_assignments add column if not exists period_type text not null default 'weekly';
+
+alter table public.affiliate_earnings drop constraint if exists affiliate_earnings_period_type_check;
+alter table public.affiliate_earnings add constraint affiliate_earnings_period_type_check check (period_type in ('weekly', 'biweekly', 'monthly'));
+alter table public.weekly_task_assignments drop constraint if exists weekly_task_assignments_period_type_check;
+alter table public.weekly_task_assignments add constraint weekly_task_assignments_period_type_check check (period_type in ('weekly', 'biweekly', 'monthly'));
+
+-- Super admins allocate gross task earnings to an account using its assigned rate.
+-- The same transaction creates the direct referral commission for that earning period.
+create or replace function public.allocate_account_earnings(
+  p_email text,
+  p_portal_type text,
+  p_period_type text,
+  p_period_start date,
+  p_period_end date,
+  p_gross_amount_usd numeric,
+  p_account_rate_pct numeric,
+  p_notes text default null
+)
+returns public.affiliate_earnings
+language plpgsql security definer set search_path = public
+as $$
+declare
+  earning public.affiliate_earnings;
+  referral record;
+  direct_rate numeric;
+  allocated numeric := round(greatest(coalesce(p_gross_amount_usd, 0), 0) * greatest(coalesce(p_account_rate_pct, 0), 0) / 100, 2);
+begin
+  if not public.is_starkworth_admin() then raise exception 'Admin access required'; end if;
+  if lower(trim(p_portal_type)) not in ('worker', 'owner', 'affiliate') then raise exception 'Invalid portal type'; end if;
+  if lower(trim(p_period_type)) not in ('weekly', 'biweekly', 'monthly') then raise exception 'Invalid earning period'; end if;
+  if p_period_end < p_period_start then raise exception 'Period end must be on or after period start'; end if;
+
+  insert into public.affiliate_earnings
+    (email, portal_type, week_start, week_end, weekly_value_usd, period_type,
+     gross_earnings_usd, account_rate_pct, allocated_amount_usd, status, notes)
+  values
+    (lower(trim(p_email)), lower(trim(p_portal_type)), p_period_start, p_period_end,
+     allocated, lower(trim(p_period_type)), greatest(coalesce(p_gross_amount_usd, 0), 0),
+     greatest(coalesce(p_account_rate_pct, 0), 0), allocated, 'pending', p_notes)
+  returning * into earning;
+
+  select coalesce(s.default_direct_pct, 5) into direct_rate from public.affiliate_settings s where s.id = 1;
+
+  for referral in
+    select ar.* from public.affiliate_referrals ar
+    where ar.referred_email = lower(trim(p_email))
+      and ar.referred_portal_type = lower(trim(p_portal_type))
+      and ar.status <> 'inactive'
+  loop
+    insert into public.affiliate_commissions
+      (referrer_email, referrer_portal_type, referred_email, referred_portal_type, tier,
+       rate_pct, base_amount_usd, commission_usd, week_start, week_end, second_tree_enabled, notes)
+    values
+      (referral.referrer_email, referral.referrer_portal_type, referral.referred_email,
+       referral.referred_portal_type, 1, coalesce(direct_rate, 5), allocated,
+       round(allocated * coalesce(direct_rate, 5) / 100, 2), p_period_start, p_period_end,
+       false, 'Direct referral commission')
+    on conflict (referrer_email, referred_email, referred_portal_type, tier, week_start, week_end)
+    do update set rate_pct = excluded.rate_pct, base_amount_usd = excluded.base_amount_usd,
+      commission_usd = excluded.commission_usd, notes = excluded.notes;
+    update public.affiliate_referrals set status = 'eligible', onboarded_at = coalesce(onboarded_at, now()), updated_at = now()
+      where id = referral.id;
+  end loop;
+  return earning;
+end;
+$$;
+
+grant execute on function public.allocate_account_earnings(text, text, text, date, date, numeric, numeric, text) to authenticated;
 alter table public.affiliate_referrer_rules drop constraint if exists affiliate_referrer_rules_referrer_portal_type_check;
 alter table public.affiliate_referrer_rules add constraint affiliate_referrer_rules_referrer_portal_type_check check (referrer_portal_type in ('worker', 'owner', 'affiliate'));
 
@@ -330,6 +487,7 @@ alter table public.affiliate_withdrawals enable row level security;
 alter table public.affiliate_commissions enable row level security;
 alter table public.weekly_task_assignments enable row level security;
 alter table public.affiliate_referrer_rules enable row level security;
+alter table public.affiliate_referrals enable row level security;
 
 -- Settings: admins only.
 drop policy if exists "admins can read affiliate settings" on public.affiliate_settings;
@@ -403,4 +561,12 @@ create policy "users can read own referrer rules" on public.affiliate_referrer_r
 
 drop policy if exists "admins can manage referrer rules" on public.affiliate_referrer_rules;
 create policy "admins can manage referrer rules" on public.affiliate_referrer_rules
+  for all to authenticated using (public.is_starkworth_admin()) with check (public.is_starkworth_admin());
+
+drop policy if exists "users can read own referrals" on public.affiliate_referrals;
+create policy "users can read own referrals" on public.affiliate_referrals
+  for select to authenticated using (lower(auth.jwt() ->> 'email') = lower(referrer_email) or lower(auth.jwt() ->> 'email') = lower(referred_email) or public.is_starkworth_admin());
+
+drop policy if exists "admins can manage referrals" on public.affiliate_referrals;
+create policy "admins can manage referrals" on public.affiliate_referrals
   for all to authenticated using (public.is_starkworth_admin()) with check (public.is_starkworth_admin());

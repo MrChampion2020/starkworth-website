@@ -15,10 +15,17 @@ const mobileMenu = document.getElementById('mobileMenu');
   mobilePortalLinks.forEach((portalLink) => portalLink.remove());
   const wrapper = document.createElement('div');
   wrapper.className = 'profile-nav';
-  wrapper.innerHTML = `<button class="profile-nav-trigger" type="button" aria-expanded="false" aria-controls="profilePortalMenu" aria-label="Open login menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg><span>Login</span></button><div class="profile-portal-menu" id="profilePortalMenu" hidden><span class="profile-menu-title">Choose a portal</span><a href="${pageRoot}client-portal.html">Account Owner</a><a href="${pageRoot}worker-login.html">Worker</a><a href="${pageRoot}affiliate.html">Affiliate</a></div>`;
+  const sessionEmail = sessionStorage.getItem('sw_user_email');
+  wrapper.innerHTML = `<button class="profile-nav-trigger" type="button" aria-expanded="false" aria-controls="profilePortalMenu" aria-label="Open profile menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg><span>${sessionEmail ? 'Account' : 'Login'}</span></button><div class="profile-portal-menu" id="profilePortalMenu" hidden>${sessionEmail ? `<span class="profile-menu-title">Signed in as<br><strong>${sessionEmail}</strong></span><button type="button" class="profile-signout">Log out</button>` : '<span class="profile-menu-title">Choose a portal</span><a href="' + pageRoot + 'client-portal.html">Account Owner</a><a href="' + pageRoot + 'worker-login.html">Worker</a><a href="' + pageRoot + 'affiliate.html">Affiliate</a>'}</div>`;
   navContainer.appendChild(wrapper);
   const trigger = wrapper.querySelector('.profile-nav-trigger');
   const menu = wrapper.querySelector('.profile-portal-menu');
+  const signout = wrapper.querySelector('.profile-signout');
+  signout?.addEventListener('click', () => {
+    if (typeof signOut === 'function') signOut();
+    else { sessionStorage.removeItem('sw_access_token'); sessionStorage.removeItem('sw_user_email'); sessionStorage.removeItem('sw_portal_type'); }
+    window.location.href = window.location.pathname.includes('/pages/') ? '../index.html' : 'index.html';
+  });
   trigger.addEventListener('click', () => {
     const open = trigger.getAttribute('aria-expanded') === 'true';
     trigger.setAttribute('aria-expanded', String(!open));
@@ -46,7 +53,7 @@ const mobileMenu = document.getElementById('mobileMenu');
 
   const sidebar = document.createElement('aside');
   sidebar.className = 'dashboard-sidebar';
-  sidebar.innerHTML = `<div class="dashboard-sidebar-brand"><span class="dashboard-sidebar-kicker">Starkworth</span><strong>${role} workspace</strong></div><nav aria-label="Dashboard sections"><a href="#overview" class="dashboard-nav-link active" data-target="overview">Overview</a><a href="#earnings" class="dashboard-nav-link" data-target="earnings">Earnings</a><a href="#payouts" class="dashboard-nav-link" data-target="payouts">Payout history</a><a href="#withdrawals" class="dashboard-nav-link" data-target="withdrawals">Withdrawals</a><a href="#tasks" class="dashboard-nav-link" data-target="tasks">Task schedule</a><a href="support.html" class="dashboard-nav-link">Support &amp; Chat</a></nav><div class="dashboard-sidebar-footer"><span class="dashboard-sync-dot"></span>Live sync enabled<button type="button" class="dashboard-refresh" onclick="window.location.reload()">Refresh data</button></div>`;
+  sidebar.innerHTML = `<div class="dashboard-sidebar-brand"><span class="dashboard-sidebar-kicker">Starkworth</span><strong>${role} workspace</strong></div><nav aria-label="Dashboard sections"><a href="#overview" class="dashboard-nav-link active" data-target="overview">Overview</a>${role === 'Affiliate' ? '<a href="#referrals" class="dashboard-nav-link" data-target="referrals">Referrals</a>' : ''}<a href="#earnings" class="dashboard-nav-link" data-target="earnings">Earnings</a><a href="#payouts" class="dashboard-nav-link" data-target="payouts">Payout history</a><a href="#withdrawals" class="dashboard-nav-link" data-target="withdrawals">Withdrawals</a><a href="#tasks" class="dashboard-nav-link" data-target="tasks">Task schedule</a><a href="support.html#chatWrapper" class="dashboard-nav-link">Support &amp; Chat</a></nav><div class="dashboard-sidebar-footer"><span class="dashboard-sync-dot"></span>Live sync enabled<button type="button" class="dashboard-refresh" onclick="window.location.reload()">Refresh data</button><button type="button" class="dashboard-logout">Log out</button></div>`;
   content.insertBefore(sidebar, content.firstChild);
 
   const panels = [...content.querySelectorAll('.history-panel')];
@@ -58,6 +65,36 @@ const mobileMenu = document.getElementById('mobileMenu');
   links.forEach((link) => link.addEventListener('click', () => {
     links.forEach((item) => item.classList.toggle('active', item === link));
   }));
+  sidebar.querySelector('.dashboard-logout').addEventListener('click', () => {
+    if (typeof signOut === 'function') signOut();
+    else { sessionStorage.clear(); }
+    window.location.href = role === 'Worker' ? 'worker-login.html' : role === 'Affiliate' ? 'affiliate.html' : 'client-portal.html';
+  });
+
+  const session = typeof getSession === 'function' ? getSession() : { email: sessionStorage.getItem('sw_user_email') };
+  if (session.email && mainPanel) {
+    const identity = document.createElement('div');
+    identity.className = 'dashboard-session-banner';
+    identity.innerHTML = `<span class="dashboard-card-label">Active session</span><strong>${session.email}</strong><span>Your ${role.toLowerCase()} dashboard is connected.</span>`;
+    mainPanel.insertBefore(identity, mainPanel.firstChild);
+    const referralPanel = document.createElement('section');
+    referralPanel.className = 'history-panel dashboard-referral-panel';
+    referralPanel.innerHTML = '<h3>Referral activity</h3><p class="dashboard-panel-note">People who joined using your referral link appear here after onboarding.</p><div class="dashboard-referral-summary">Loading referral activity...</div><div class="dashboard-referral-list"></div>';
+    if (!(role === 'Affiliate' && content.querySelector('#referrals'))) mainPanel.appendChild(referralPanel);
+    if (typeof fetchAffiliateReferrals === 'function') fetchAffiliateReferrals(session.email).then(rows => {
+      const summary = referralPanel.querySelector('.dashboard-referral-summary');
+      const list = referralPanel.querySelector('.dashboard-referral-list');
+      summary.textContent = `${rows.length} referred account${rows.length === 1 ? '' : 's'}`;
+      list.innerHTML = rows.length ? rows.slice(0, 8).map(row => `<div class="dashboard-referral-row"><strong>${row.referred_email}</strong><span>${row.referred_portal_type} · ${row.status}</span></div>`).join('') : '<p class="history-empty">No referrals captured yet.</p>';
+    }).catch(() => {});
+    if (typeof fetchAffiliateReferralForReferred === 'function') fetchAffiliateReferralForReferred(session.email, role === 'Worker' ? 'worker' : role === 'Affiliate' ? 'affiliate' : 'owner').then(row => {
+      if (!row) return;
+      const attribution = document.createElement('div');
+      attribution.className = 'dashboard-attribution-card';
+      attribution.innerHTML = `<span class="dashboard-card-label">Referral attribution</span><strong>You joined through ${row.referrer_email}</strong><span>Status: ${row.status}</span>`;
+      mainPanel.insertBefore(attribution, mainPanel.children[1] || null);
+    }).catch(() => {});
+  }
 
   if (role !== 'Affiliate' && content.querySelector('#affiliateArea')) {
     const area = content.querySelector('#affiliateArea');

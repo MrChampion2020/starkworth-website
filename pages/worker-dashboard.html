@@ -339,7 +339,7 @@
       const totalReferralEarnings = commissions.reduce((sum, row) => sum + Number(row.commission_usd || 0), 0);
 
       document.getElementById('affiliateArea').style.display = 'block';
-      document.getElementById('weeklyValueCard').textContent = formatMoney(latestEarning.weekly_value_usd || worker.weekly_value_usd || 0);
+      document.getElementById('weeklyValueCard').textContent = formatMoney(latestEarning.allocated_amount_usd ?? latestEarning.weekly_value_usd ?? worker.weekly_value_usd ?? 0);
       document.getElementById('directRateCard').textContent = `${Number(settings?.default_direct_pct || 5)}%`;
       document.getElementById('secondTreeCard').textContent = referrerRule
         ? (referrerRule.second_tree_enabled ? `${Number(referrerRule.second_tree_pct || 0)}% enabled` : 'Disabled')
@@ -354,7 +354,7 @@
       renderRows('workerEarningsBody', earnings, 'No earning history yet.', row => `
         <tr>
           <td>${escapeHtml(formatDate(row.week_start))} - ${escapeHtml(formatDate(row.week_end))}</td>
-          <td>${escapeHtml(formatMoney(row.weekly_value_usd))}</td>
+          <td>${escapeHtml(formatMoney(row.allocated_amount_usd ?? row.weekly_value_usd))}</td>
           <td>${escapeHtml(formatDate(row.task_start_date))} - ${escapeHtml(formatDate(row.task_end_date))}</td>
           <td>${escapeHtml(summarizeSlots(row.daily_time_slots))}</td>
           <td><span class="history-chip">${escapeHtml(row.status || 'pending')}</span></td>

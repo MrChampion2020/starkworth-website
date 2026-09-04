@@ -126,6 +126,7 @@
         const payload = JSON.parse(atob(accessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
         sessionStorage.setItem('sw_access_token', accessToken);
         sessionStorage.setItem('sw_user_email', payload.email || '');
+        setSessionPortalType('affiliate');
         const profile = await fetchAffiliateAccount(payload.email || '');
         if (!profile) await provisionAffiliateProfile('', getStoredReferralCode());
         history.replaceState(null, '', window.location.pathname);
@@ -165,6 +166,7 @@
       status.textContent = 'Signing in...';
       const result = await signInAffiliate(email, password);
       if (result.ok) {
+        setSessionPortalType('affiliate');
         window.location.href = 'affiliate-dashboard.html';
         return;
       }
@@ -186,13 +188,16 @@
       const result = await signUpAffiliate(email, password, name, getStoredReferralCode());
       if (result.ok) {
         status.textContent = result.data.access_token ? 'Account saved. Opening your affiliate dashboard...' : 'Account saved. If verification is required, use the email link and you will return here to sign in.';
-        if (result.data.access_token) window.location.href = 'affiliate-dashboard.html';
+        if (result.data.access_token) { setSessionPortalType('affiliate'); window.location.href = 'affiliate-dashboard.html'; }
         else button.disabled = false;
         return;
       }
       status.textContent = result.data?.error_description || result.data?.msg || 'Could not create affiliate account.';
       button.disabled = false;
     });
+  </script>
+  <script>
+    (async function () { const session = getSession(); if (session.accessToken && session.email && getSessionPortalType() === 'affiliate' && !window.location.hash.includes('access_token')) window.location.href = 'affiliate-dashboard.html'; })();
   </script>
 </body>
 </html>

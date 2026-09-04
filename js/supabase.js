@@ -36,7 +36,9 @@ function buildReferralLink(pagePath, referralCode) {
 async function fetchTableRows(table, query = '', headers = getAuthHeaders()) {
   const url = `${SUPABASE_URL}/rest/v1/${table}${query ? `?${query}` : ''}`;
   const response = await fetch(url, { headers });
-  return response.json();
+  if (!response.ok) return [];
+  const data = await response.json();
+  return Array.isArray(data) ? data : [];
 }
 
 // Returns the real logged-in admin's token if one exists, otherwise falls
@@ -123,6 +125,36 @@ async function fetchAffiliateWithdrawals(email) {
 async function fetchAffiliateCommissions(email) {
   const query = email ? `referrer_email=eq.${escapeQuery(email)}&order=created_at.desc` : 'order=created_at.desc';
   return fetchTableRows('affiliate_commissions', query);
+}
+
+async function fetchAffiliateReferrals(email) {
+  const query = email ? `referrer_email=eq.${escapeQuery(email)}&order=captured_at.desc` : 'order=captured_at.desc';
+  return fetchTableRows('affiliate_referrals', query);
+}
+
+async function fetchAffiliateReferralForReferred(email, portalType) {
+  if (!email) return null;
+  const query = `referred_email=eq.${escapeQuery(email)}${portalType ? `&referred_portal_type=eq.${escapeQuery(portalType)}` : ''}&limit=1`;
+  const rows = await fetchTableRows('affiliate_referrals', query);
+  return rows[0] || null;
+}
+
+async function allocateAccountEarnings(data) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/allocate_account_earnings`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      p_email: data.email,
+      p_portal_type: data.portal_type,
+      p_period_type: data.period_type,
+      p_period_start: data.period_start,
+      p_period_end: data.period_end,
+      p_gross_amount_usd: Number(data.gross_amount_usd),
+      p_account_rate_pct: Number(data.account_rate_pct),
+      p_notes: data.notes || null
+    })
+  });
+  return { ok: response.ok, data: await response.json().catch(() => null) };
 }
 
 async function fetchWeeklyTaskAssignments(email) {
@@ -225,6 +257,10 @@ async function fetchAffiliateWithdrawalsAll() {
 
 async function fetchAffiliateCommissionsAll() {
   return fetchTableRows('affiliate_commissions', 'order=created_at.desc');
+}
+
+async function fetchAffiliateReferralsAll() {
+  return fetchTableRows('affiliate_referrals', 'order=captured_at.desc');
 }
 
 async function fetchWeeklyTaskAssignmentsAll() {
@@ -339,6 +375,14 @@ async function signInWithPassword(email, password) {
   return { ok: response.ok, data };
 }
 
+function setSessionPortalType(portalType) {
+  if (portalType) sessionStorage.setItem('sw_portal_type', portalType);
+}
+
+function getSessionPortalType() {
+  return sessionStorage.getItem('sw_portal_type') || '';
+}
+
 async function signInAffiliate(email, password) {
   const result = await signInWithPassword(email, password);
   if (!result.ok) return result;
@@ -382,6 +426,7 @@ function getSession() {
 function signOut() {
   sessionStorage.removeItem('sw_access_token');
   sessionStorage.removeItem('sw_user_email');
+  sessionStorage.removeItem('sw_portal_type');
 }
 
 async function resetPassword(email) {
