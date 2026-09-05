@@ -106,7 +106,7 @@ window.confirmReferralWithoutCode = function confirmReferralWithoutCode() {
   const path = window.location.pathname;
   const role = path.includes('worker-dashboard') ? 'Worker' : path.includes('client-dashboard') ? 'Account Owner' : path.includes('affiliate-dashboard') ? 'Affiliate' : '';
   if (!role) return;
-  document.body.classList.add('dashboard-page');
+  document.body.classList.add('dashboard-page', `dashboard-${role.toLowerCase().replace(/\s+/g, '-')}`);
   const section = document.querySelector('.portal-section') || document.querySelector('.dashboard-section');
   const content = section?.querySelector('.portal-wrapper') || section?.querySelector(':scope > div');
   if (!section || !content) return;

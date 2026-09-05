@@ -2081,34 +2081,34 @@ body.modal-open {
 =========================== */
 .footer-socials {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   margin-top: 18px;
 }
 .footer-social-link {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #18352d;
+  border: 1px solid rgba(255,255,255,0.18);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255,255,255,0.6);
-  transition: all 0.2s;
+  color: #fff !important;
+  transition: transform .2s ease, filter .2s ease, box-shadow .2s ease;
 }
 .footer-social-link:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--dark);
-  transform: translateY(-2px);
+  border-color: transparent;
+  transform: translateY(-3px);
+  filter: brightness(1.08);
+  box-shadow: 0 8px 18px rgba(0,0,0,.18);
 }
-.footer-social-link svg { width: 17px; height: 17px; }
-.footer-social-link.social-tiktok { color: #25f4ee; }
-.footer-social-link.social-instagram { color: #e1306c; }
-.footer-social-link.social-facebook { color: #1877f2; }
-.footer-social-link.social-youtube { color: #ff0000; }
-.footer-social-link.social-linkedin { color: #0a66c2; }
-.footer-social-link.social-x { color: #111; }
+.footer-social-link svg { width: 18px; height: 18px; }
+.footer-social-link.social-tiktok { background: #111827; }
+.footer-social-link.social-instagram { background: linear-gradient(145deg, #7c3aed, #e1306c 55%, #f59e0b); }
+.footer-social-link.social-facebook { background: #1877f2; }
+.footer-social-link.social-youtube { background: #e11d48; }
+.footer-social-link.social-linkedin { background: #0a66c2; }
+.footer-social-link.social-x { background: #000; }
 .referral-choice-overlay { position:fixed; inset:0; z-index:10000; display:grid; place-items:center; padding:20px; background:rgba(2,44,34,.58); }
 .referral-choice-card { position:relative; width:min(100%, 460px); padding:30px; border:1px solid var(--border); border-radius:20px; background:#fff; box-shadow:0 24px 70px rgba(0,0,0,.24); }
 .referral-choice-card h2 { margin:8px 0 12px; color:var(--dark); }
@@ -2369,6 +2369,12 @@ body.modal-open {
 .dashboard-page .page-header { background: linear-gradient(120deg, #022c22 0%, #064e3b 68%, #0b6b4f 100%); }
 .dashboard-page .portal-login-box,
 .dashboard-page .worker-form-box { background: rgba(255,255,255,.88); border-color: rgba(167,243,208,.9); box-shadow: 0 16px 42px rgba(2,44,34,.09); }
+.dashboard-account-owner .portal-login-box { padding: 30px; border-radius: 22px; }
+.dashboard-account-owner .portal-box-header { background: linear-gradient(135deg, #f0fdf4, #fff); border: 1px solid #d4e8dc; border-radius: 16px; padding: 20px; }
+.dashboard-account-owner .portal-box-header h2 { margin-top: 8px; font-size: 28px; }
+.dashboard-account-owner .notice-info { border-left: 4px solid var(--accent); border-radius: 12px; }
+.dashboard-account-owner .history-panel h3 { display: flex; align-items: center; gap: 10px; }
+.dashboard-account-owner .history-panel h3::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
 .dashboard-page .portal-box-header { padding: 4px 4px 20px; margin-bottom: 20px; border-bottom: 1px solid #e1eee7; text-align: left; }
 .dashboard-page .portal-box-header h2 { font-size: 26px; }
 .dashboard-page .portal-box-header p { max-width: 680px; }
