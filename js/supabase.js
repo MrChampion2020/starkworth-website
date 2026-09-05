@@ -141,7 +141,12 @@ async function fetchAffiliateReferralForReferred(email, portalType) {
 
 async function fetchStarkAcTrainee(email) {
   const rows = await fetchTableRows('starkac_trainees', `email=eq.${escapeQuery(email)}&limit=1`);
-  return rows[0] || null;
+  if (rows[0]) return rows[0];
+  if (getSession().accessToken) {
+    const provisioned = await provisionStarkAcProfile();
+    return provisioned.ok ? provisioned.data : null;
+  }
+  return null;
 }
 
 async function fetchStarkAcActivity(email) {
@@ -150,6 +155,27 @@ async function fetchStarkAcActivity(email) {
 
 async function fetchStarkAcTraineesAll() {
   return fetchTableRows('starkac_trainees', 'order=created_at.desc');
+}
+
+async function fetchStarkAcPayments(email) {
+  return fetchTableRows('starkac_payments', `trainee_email=eq.${escapeQuery(email)}&order=created_at.desc`);
+}
+
+async function provisionStarkAcProfile() {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/provision_starkac_profile`, { method: 'POST', headers: getAuthHeaders(), body: '{}' });
+  const data = await response.json();
+  return { ok: response.ok, data };
+}
+
+async function initializeStarkAcPayment() {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/starkac-monnify-payment`, { method: 'POST', headers: getAuthHeaders(), body: '{}' });
+  const data = await response.json();
+  return { ok: response.ok && data.ok, data };
+}
+
+async function signInWithGoogle(redirectPath = '/starkac/dashboard.html') {
+  const redirectTo = `${window.location.origin}${redirectPath}`;
+  window.location.href = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
 }
 
 async function saveStarkAcActivity(data) {
@@ -453,6 +479,15 @@ async function requestAffiliateWithdrawal(email, amountUsd, destination, portalT
 }
 
 function getSession() {
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const hashToken = hash.get('access_token');
+  if (hashToken && !sessionStorage.getItem('sw_access_token')) {
+    try {
+      const payload = JSON.parse(atob(hashToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      sessionStorage.setItem('sw_access_token', hashToken);
+      if (payload.email) sessionStorage.setItem('sw_user_email', payload.email);
+    } catch (_) {}
+  }
   return {
     accessToken: sessionStorage.getItem('sw_access_token'),
     email: sessionStorage.getItem('sw_user_email')
@@ -464,6 +499,19 @@ function signOut() {
   sessionStorage.removeItem('sw_user_email');
   sessionStorage.removeItem('sw_portal_type');
   sessionStorage.removeItem('sw_user_name');
+}
+
+async function restoreOAuthSession() {
+  const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const accessToken = params.get('access_token');
+  if (!accessToken) return getSession();
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${accessToken}` } });
+  if (!response.ok) return getSession();
+  const user = await response.json();
+  sessionStorage.setItem('sw_access_token', accessToken);
+  sessionStorage.setItem('sw_user_email', user.email || '');
+  history.replaceState(null, document.title, window.location.pathname + window.location.search);
+  return getSession();
 }
 
 async function resetPassword(email) {
