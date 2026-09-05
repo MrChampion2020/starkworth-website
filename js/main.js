@@ -89,6 +89,19 @@ window.addPasswordRevealControls = function addPasswordRevealControls() {
 };
 window.addPasswordRevealControls();
 
+window.confirmReferralWithoutCode = function confirmReferralWithoutCode() {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'referral-choice-overlay';
+    overlay.innerHTML = '<div class="referral-choice-card" role="dialog" aria-modal="true" aria-labelledby="referralChoiceTitle"><button type="button" class="referral-choice-close" aria-label="Close">&times;</button><span class="dashboard-card-label">Referral information</span><h2 id="referralChoiceTitle">Continue without a referral?</h2><p>You can continue creating your account without a referral code. Your account will be recorded as an organic signup, and an admin can link you to an affiliate later if requested.</p><div class="referral-choice-actions"><button type="button" class="btn btn-outline referral-choice-back">Go back</button><button type="button" class="btn btn-primary referral-choice-continue">Continue signup</button></div></div>';
+    document.body.appendChild(overlay);
+    const finish = (value) => { overlay.remove(); resolve(value); };
+    overlay.querySelector('.referral-choice-close').addEventListener('click', () => finish(false));
+    overlay.querySelector('.referral-choice-back').addEventListener('click', () => finish(false));
+    overlay.querySelector('.referral-choice-continue').addEventListener('click', () => finish(true));
+  });
+};
+
 (function enhanceRoleDashboard() {
   const path = window.location.pathname;
   const role = path.includes('worker-dashboard') ? 'Worker' : path.includes('client-dashboard') ? 'Account Owner' : path.includes('affiliate-dashboard') ? 'Affiliate' : '';

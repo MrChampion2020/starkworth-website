@@ -348,9 +348,7 @@
       btn.textContent = 'Creating account...';
 
       try {
-        if (!getStoredReferralCode()) {
-          errorText.textContent = 'A referral link is required to create an account owner account.';
-          errorDiv.style.display = 'flex';
+        if (!getStoredReferralCode() && window.confirmReferralWithoutCode && !(await window.confirmReferralWithoutCode())) {
           btn.disabled = false;
           btn.textContent = 'Create Account & Continue';
           return;

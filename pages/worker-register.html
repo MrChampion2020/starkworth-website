@@ -353,10 +353,7 @@
     errorMessage.textContent = 'Please tick the agreement checkbox before submitting.';
     return;
   }
-  if (!getStoredReferralCode()) {
-    errorMessage.textContent = 'A referral link is required to complete worker registration. Please use a valid referral link.';
-    return;
-  }
+  if (!getStoredReferralCode() && window.confirmReferralWithoutCode && !(await window.confirmReferralWithoutCode())) return;
 
   const registerBtn = document.getElementById('registerBtn');
   registerBtn.disabled = true;

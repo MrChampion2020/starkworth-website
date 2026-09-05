@@ -2109,6 +2109,13 @@ body.modal-open {
 .footer-social-link.social-youtube { color: #ff0000; }
 .footer-social-link.social-linkedin { color: #0a66c2; }
 .footer-social-link.social-x { color: #111; }
+.referral-choice-overlay { position:fixed; inset:0; z-index:10000; display:grid; place-items:center; padding:20px; background:rgba(2,44,34,.58); }
+.referral-choice-card { position:relative; width:min(100%, 460px); padding:30px; border:1px solid var(--border); border-radius:20px; background:#fff; box-shadow:0 24px 70px rgba(0,0,0,.24); }
+.referral-choice-card h2 { margin:8px 0 12px; color:var(--dark); }
+.referral-choice-card p { color:var(--text-muted); line-height:1.6; }
+.referral-choice-close { position:absolute; top:12px; right:14px; width:34px; height:34px; border:0; border-radius:50%; background:transparent; color:var(--text-muted); font-size:26px; cursor:pointer; }
+.referral-choice-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:22px; }
+@media (max-width:520px) { .referral-choice-card { padding:24px; } .referral-choice-actions { flex-direction:column-reverse; } .referral-choice-actions button { width:100%; } }
 
 .worker-operations-panel { display:grid; gap:18px; margin:24px 0; }
 .worker-danger-mark { display:flex; align-items:flex-start; gap:14px; padding:16px 18px; border:1px solid #d8e3df; border-radius:16px; background:#f8fbfa; }

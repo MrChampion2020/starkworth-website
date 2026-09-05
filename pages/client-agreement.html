@@ -606,10 +606,7 @@
       formStatus.textContent = 'Please enter a valid email address.';
       return;
     }
-    if (!referralCode) {
-      formStatus.textContent = 'A referral link is required to complete account owner onboarding. Please use a valid referral link.';
-      return;
-    }
+    if (!referralCode && window.confirmReferralWithoutCode && !(await window.confirmReferralWithoutCode())) return;
 
     const submitBtn = document.getElementById('submitBtn');
     submitBtn.disabled = true;

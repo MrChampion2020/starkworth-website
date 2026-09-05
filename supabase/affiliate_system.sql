@@ -192,14 +192,6 @@ $$;
 create or replace function public.require_referral_code()
 returns trigger language plpgsql as $$
 begin
-  if nullif(trim(new.referred_by_code), '') is null then
-    raise exception 'A referral code is required to complete onboarding';
-  end if;
-  if not exists (select 1 from public.affiliate_accounts where referral_code = trim(new.referred_by_code))
-    and not exists (select 1 from public.workers where referral_code = trim(new.referred_by_code))
-    and not exists (select 1 from public.agreements where referral_code = trim(new.referred_by_code)) then
-    raise exception 'The referral code is invalid';
-  end if;
   return new;
 end;
 $$;
@@ -245,12 +237,7 @@ $$;
 grant execute on function public.link_existing_referral(text, text, text, text, text, text) to authenticated;
 
 drop trigger if exists workers_require_referral_code on public.workers;
-create trigger workers_require_referral_code before insert on public.workers
-  for each row execute function public.require_referral_code();
-
 drop trigger if exists agreements_require_referral_code on public.agreements;
-create trigger agreements_require_referral_code before insert on public.agreements
-  for each row execute function public.require_referral_code();
 
 create or replace function public.create_affiliate_account_profile()
 returns trigger
@@ -259,14 +246,6 @@ security definer set search_path = public
 as $$
 begin
   if coalesce(new.raw_user_meta_data ->> 'portal_type', '') = 'affiliate' then
-    if nullif(trim(new.raw_user_meta_data ->> 'referred_by_code'), '') is null then
-      raise exception 'A referral code is required to create an affiliate account';
-    end if;
-    if not exists (select 1 from public.affiliate_accounts where referral_code = trim(new.raw_user_meta_data ->> 'referred_by_code'))
-      and not exists (select 1 from public.workers where referral_code = trim(new.raw_user_meta_data ->> 'referred_by_code'))
-      and not exists (select 1 from public.agreements where referral_code = trim(new.raw_user_meta_data ->> 'referred_by_code')) then
-      raise exception 'The referral code is invalid';
-    end if;
     insert into public.affiliate_accounts (email, full_name, referral_code, referred_by_code)
     values (lower(new.email), coalesce(nullif(new.raw_user_meta_data ->> 'full_name', ''), split_part(new.email, '@', 1)), public.generate_affiliate_referral_code(), nullif(new.raw_user_meta_data ->> 'referred_by_code', ''))
     on conflict (email) do nothing;
