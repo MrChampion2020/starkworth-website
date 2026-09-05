@@ -55,7 +55,7 @@ function getAuthHeaders() {
 
 // Save agreement to Supabase (public form — stays on anon key)
 async function saveAgreement(data) {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/agreements`, {
+  const request = (payload) => fetch(`${SUPABASE_URL}/rest/v1/agreements`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -63,9 +63,18 @@ async function saveAgreement(data) {
       'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       'Prefer': 'return=minimal'
     },
-    body: JSON.stringify(data)
+    body: JSON.stringify(payload)
   });
-  return response.ok;
+  let response = await request(data);
+  let error = response.ok ? null : await response.json().catch(() => ({}));
+  if (!response.ok && (response.status === 400 || response.status === 404) && (error.code === 'PGRST204' || error.message?.includes('Could not find the') || error.message?.includes('column'))) {
+    const fallback = { ...data };
+    delete fallback.referral_code;
+    delete fallback.referred_by_code;
+    response = await request(fallback);
+    error = response.ok ? null : await response.json().catch(() => error || ({}));
+  }
+  return { ok: response.ok, error };
 }
 
 // Save worker registration to Supabase (public form — stays on anon key)
