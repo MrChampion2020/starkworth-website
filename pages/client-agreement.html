@@ -575,8 +575,10 @@
     // Form submit
    document.getElementById('agreementForm').addEventListener('submit', async function(e) {
   e.preventDefault();
+  const formStatus = document.getElementById('agreementFormStatus') || (() => { const node = document.createElement('p'); node.id = 'agreementFormStatus'; node.className = 'form-status'; this.appendChild(node); return node; })();
+  formStatus.textContent = '';
   if (!hasSigned) {
-    alert('Please draw your signature before submitting.');
+    formStatus.textContent = 'Please draw your signature before submitting.';
     return;
   }
 
@@ -589,8 +591,16 @@
     const notes = document.getElementById('notes').value;
     const notesWithAccountType = accountType ? `Account type: ${accountType}. ${notes}` : notes;
     const referralCode = getStoredReferralCode();
+    if (!name || !email || !phone || !accountType || !outlierUsername || !paymentMethod) {
+      formStatus.textContent = 'Please complete all required agreement fields.';
+      return;
+    }
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      formStatus.textContent = 'Please enter a valid email address.';
+      return;
+    }
     if (!referralCode) {
-      alert('A referral link is required to complete account owner onboarding. Please use a valid referral link.');
+      formStatus.textContent = 'A referral link is required to complete account owner onboarding. Please use a valid referral link.';
       return;
     }
 
@@ -611,18 +621,19 @@
       referred_by_code: referralCode || null
     });
 
-    if (saved) {
+    if (saved.ok) {
       document.getElementById('successName').textContent = name;
       document.getElementById('agreementForm').style.display = 'none';
       document.getElementById('signNotice').style.display = 'none';
       document.getElementById('successState').style.display = 'block';
     } else {
-      alert('Something went wrong. Please try again.');
+      const detail = saved.error?.message || saved.error?.details || saved.error?.hint || '';
+      formStatus.textContent = detail || 'We could not save your agreement. Please check your details and try again.';
       submitBtn.disabled = false;
       submitBtn.textContent = originalBtnText;
     }
   } catch (err) {
-    alert('Network error — please check your connection and try again.');
+    formStatus.textContent = 'Network error. Please check your connection and try again.';
     submitBtn.disabled = false;
     submitBtn.textContent = originalBtnText;
   }

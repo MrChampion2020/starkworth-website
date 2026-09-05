@@ -2108,6 +2108,24 @@ body.modal-open {
 .footer-social-link.social-linkedin { color: #0a66c2; }
 .footer-social-link.social-x { color: #111; }
 
+.worker-operations-panel { display:grid; gap:18px; margin:24px 0; }
+.worker-danger-mark { display:flex; align-items:flex-start; gap:14px; padding:16px 18px; border:1px solid #d8e3df; border-radius:16px; background:#f8fbfa; }
+.worker-danger-mark > span { display:grid; place-items:center; width:32px; height:32px; border-radius:50%; background:#b9c8c2; color:#fff; font-weight:800; }
+.worker-danger-mark.is-active { border-color:#fecaca; background:#fff1f2; color:#991b1b; }
+.worker-danger-mark.is-active > span { background:#dc2626; }
+.worker-danger-mark p, .worker-report-card p { margin:5px 0 0; color:var(--text-muted); font-size:13px; }
+.worker-report-card, .worker-alert-list { padding:20px; border:1px solid var(--border); border-radius:16px; background:#fff; }
+.worker-report-card h3, .worker-alert-list h3 { margin:0 0 8px; }
+.worker-report-card form { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:14px; margin-top:16px; }
+.worker-report-card label { display:grid; gap:6px; color:var(--text-muted); font-size:12px; font-weight:700; }
+.worker-report-card input, .worker-report-card textarea { width:100%; padding:11px 12px; border:1px solid var(--border); border-radius:10px; background:#fbfdfc; color:var(--dark); font:14px var(--font-body); }
+.worker-report-card .full, .worker-report-card button, .worker-report-card .worker-report-status { grid-column:1/-1; }
+.worker-alert-list { display:grid; gap:10px; }
+.worker-alert-row { display:grid; gap:4px; padding:12px; border-left:4px solid #dc2626; border-radius:8px; background:#fff1f2; color:#7f1d1d; font-size:13px; }
+.worker-alert-row span { color:#991b1b; }
+.worker-admin-alerts { display:grid; gap:12px; margin-bottom:20px; }
+@media (max-width:700px) { .worker-report-card form { grid-template-columns:1fr; } }
+
 /* ===========================
    GUIDES PAGE
 =========================== */

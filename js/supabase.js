@@ -99,7 +99,8 @@ async function saveAffiliateSettings(data) {
     headers: { ...getAuthHeaders(), 'Prefer': 'return=representation' },
     body: JSON.stringify(data)
   });
-  return response.ok;
+  const error = response.ok ? null : await response.json().catch(() => ({}));
+  return { ok: response.ok, error };
 }
 
 async function fetchAffiliateSettings() {
@@ -159,6 +160,25 @@ async function fetchStarkAcTraineesAll() {
 
 async function fetchStarkAcPayments(email) {
   return fetchTableRows('starkac_payments', `trainee_email=eq.${escapeQuery(email)}&order=created_at.desc`);
+}
+
+async function fetchWorkerDailyReports(email) {
+  return fetchTableRows('worker_daily_reports', `worker_email=eq.${escapeQuery(email)}&order=report_date.desc`);
+}
+
+async function saveWorkerDailyReport(data) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/worker_daily_reports`, { method: 'POST', headers: { ...getAuthHeaders(), Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(data) });
+  return response.ok;
+}
+
+async function fetchWorkerEmergencyAlerts(email = '') {
+  const query = email ? `worker_email=eq.${escapeQuery(email)}&status=neq.resolved&order=created_at.desc` : 'status=neq.resolved&order=created_at.desc';
+  return fetchTableRows('worker_emergency_alerts', query);
+}
+
+async function checkWorkerDailyRoutine() {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/check_worker_daily_routine`, { method: 'POST', headers: getAuthHeaders(), body: '{}' });
+  return response.ok ? response.json() : null;
 }
 
 async function provisionStarkAcProfile() {
