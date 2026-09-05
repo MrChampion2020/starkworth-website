@@ -25,6 +25,23 @@ function storeReferralCodeFromUrl() {
   return code || getStoredReferralCode();
 }
 
+async function getReferralCodeForSession() {
+  const sessionCode = getStoredReferralCode();
+  const token = sessionStorage.getItem('sw_access_token');
+  if (!token) return sessionCode;
+  try {
+    const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` } });
+    const user = await response.json();
+    const metadataCode = user.user_metadata?.referred_by_code || user.raw_user_meta_data?.referred_by_code || '';
+    if (metadataCode) {
+      sessionStorage.setItem('sw_referral_code', metadataCode);
+      localStorage.setItem('sw_referral_code', metadataCode);
+      return metadataCode.trim();
+    }
+  } catch (_) {}
+  return sessionCode;
+}
+
 function buildReferralLink(pagePath, referralCode) {
   const code = (referralCode || getStoredReferralCode() || '').trim();
   const [path, hash = ''] = pagePath.replace(/^\/+/, '').split('#');

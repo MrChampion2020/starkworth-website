@@ -1415,6 +1415,8 @@
   font-weight: 600;
   color: var(--primary);
 }
+.agreement-open-link { display:inline-flex; margin:12px 0 14px; color:var(--primary); font-weight:700; text-decoration:underline; }
+.signature-acknowledge-label { margin:0 0 18px; }
 
 .affiliate-form label {
   display: block;
@@ -2310,10 +2312,10 @@ body.modal-open {
   .about-container { grid-template-columns: minmax(0, 1fr); gap: 40px; }
   .contact-container { grid-template-columns: minmax(0, 1fr); gap: 40px; }
   .process-grid { grid-template-columns: 1fr 1fr; }
-  .agreement-wrapper { grid-template-columns: minmax(0, 1fr); }
+  .agreement-wrapper { display: flex; flex-direction: column; }
   .portal-wrapper { grid-template-columns: minmax(0, 1fr); }
   .worker-register-wrapper { grid-template-columns: minmax(0, 1fr); }
-  .signature-box { position: static; }
+  .signature-box { position: static; order: -1; }
   .admin-stats-grid { grid-template-columns: 1fr 1fr; }
   .admin-two-col { grid-template-columns: minmax(0, 1fr); }
   .admin-nav-links {
