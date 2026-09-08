@@ -17,6 +17,21 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    .flag-chip { display:inline-flex; align-items:center; gap:5px; padding:4px 9px; border-radius:999px; font-size:11px; font-weight:700; text-transform:capitalize; }
+    .flag-chip::before { content:""; width:7px; height:7px; border-radius:50%; background:currentColor; }
+    .flag-green  { background:#d1fae5; color:#047857; }
+    .flag-yellow { background:#fef3c7; color:#b45309; }
+    .flag-red    { background:#fee2e2; color:#b91c1c; }
+    .flag-due    { background:#e0e7ff; color:#4338ca; }
+    .flag-pending{ background:#f1f5f9; color:#64748b; }
+    .checkin-slot-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin:16px 0; }
+    .checkin-slot { border:1px solid var(--border); border-radius:12px; padding:12px; }
+    .checkin-slot small { display:block; color:var(--text-muted); font-size:11px; margin-top:6px; }
+    .checkin-form { display:grid; gap:12px; margin-top:12px; }
+    .checkin-form select, .checkin-form textarea, .checkin-form input { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font:inherit; }
+    .task-feedback-item { border:1px solid var(--border); border-radius:12px; padding:14px; margin-top:12px; }
+  </style>
 </head>
 <body>
 
@@ -69,6 +84,60 @@
           <div class="notice notice-info" style="margin-top: 24px;">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>
             <span>Detailed earnings and payment history will appear here as your account activity is recorded. Weekly pay goes out every Wednesday by 3:00 PM (CST), based on task performance and input.</span>
+          </div>
+
+          <div class="history-panel" id="checkinCard">
+            <h3>Today's check-ins</h3>
+            <p style="font-size:13px;color:var(--text-muted);">Start your shift, then post an update on your assigned client every 90 minutes. Report at least 10 minutes early to stay green.</p>
+            <div id="shiftNotStarted" style="margin-top:14px;">
+              <button class="btn btn-primary" type="button" onclick="handleStartShift()" id="startShiftBtn">Start shift</button>
+            </div>
+            <div id="shiftStarted" style="display:none;">
+              <div class="checkin-slot-grid" id="checkinSlotGrid"></div>
+              <div id="checkinFormWrap" style="display:none;">
+                <h4 style="margin:12px 0 0;">Post update for <span id="nextSlotLabel"></span></h4>
+                <div class="checkin-form">
+                  <select id="checkinOwner"><option value="">Select assigned client…</option></select>
+                  <select id="checkinProject"><option value="">Select project (optional)…</option></select>
+                  <select id="checkinTask"><option value="">Select task (optional)…</option></select>
+                  <textarea id="checkinUpdate" rows="3" placeholder="What did you get done since the last check-in?"></textarea>
+                  <textarea id="checkinBlockers" rows="2" placeholder="Any blockers? (optional)"></textarea>
+                  <button class="btn btn-primary" type="button" onclick="handleSubmitCheckin()" id="submitCheckinBtn">Submit check-in</button>
+                  <span id="checkinStatus" style="font-size:13px;color:var(--text-muted);"></span>
+                </div>
+              </div>
+              <p id="allCheckinsDone" style="display:none;font-size:13px;color:var(--accent);margin-top:12px;">All check-ins for today are submitted. Nice work.</p>
+            </div>
+          </div>
+
+          <div class="history-panel" id="taskValueCard">
+            <h3>Declare weekly task value</h3>
+            <p style="font-size:13px;color:var(--text-muted);">Enter the USD value of this week's task for a client you're assigned to. An admin reviews it and builds the payout split. You keep roughly 30%.</p>
+            <div class="checkin-form">
+              <select id="tvOwner"><option value="">Select assigned client…</option></select>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <label style="flex:1;min-width:140px;font-size:13px;">Week start<input type="date" id="tvWeekStart" style="width:100%;"></label>
+                <label style="flex:1;min-width:140px;font-size:13px;">Week end<input type="date" id="tvWeekEnd" style="width:100%;"></label>
+              </div>
+              <input type="number" id="tvValue" min="0" step="0.01" placeholder="Task value (USD)" />
+              <textarea id="tvNotes" rows="2" placeholder="Notes for the admin (optional)"></textarea>
+              <button class="btn btn-primary" type="button" onclick="handleDeclareTaskValue()" id="tvSubmitBtn">Submit declaration</button>
+              <span id="tvStatus" style="font-size:13px;color:var(--text-muted);"></span>
+            </div>
+            <table class="history-table" style="margin-top:16px;">
+              <thead>
+                <tr><th>Week</th><th>Client</th><th>Value</th><th>Status</th><th>Your share</th></tr>
+              </thead>
+              <tbody id="tvHistoryBody">
+                <tr><td colspan="5" class="history-empty">No declarations yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="history-panel" id="taskFeedbackCard" style="display:none;">
+            <h3>Task feedback</h3>
+            <p style="font-size:13px;color:var(--text-muted);">Send progress notes or a suggested status change to the admin team for the tasks assigned to you.</p>
+            <div id="taskFeedbackList"></div>
           </div>
 
           <div id="affiliateArea" style="display:none;">
@@ -306,6 +375,224 @@
       tbody.innerHTML = rows.map(rowRenderer).join('');
     }
 
+    // ===== 90-minute check-ins =====
+    let cinSession = null;
+    let cinAssignments = [];
+    let cinProjectsByOwner = {};
+    let cinSlots = [];
+
+    function flagChip(flag) {
+      const cls = { green: 'flag-green', yellow: 'flag-yellow', red: 'flag-red', due: 'flag-due', pending: 'flag-pending' }[flag] || 'flag-pending';
+      return `<span class="flag-chip ${cls}">${escapeHtml(flag)}</span>`;
+    }
+    function formatTime(value) {
+      if (!value) return '-';
+      return new Date(value).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    async function initCheckins(email) {
+      cinSession = email;
+      cinAssignments = await fetchAssignmentsForAnnotator(email);
+      const ownerSelect = document.getElementById('checkinOwner');
+      ownerSelect.innerHTML = '<option value="">Select assigned client…</option>' +
+        cinAssignments.map(a => `<option value="${escapeHtml(a.owner_email)}">${escapeHtml(a.owner_email)}</option>`).join('');
+      ownerSelect.onchange = onCheckinOwnerChange;
+      document.getElementById('checkinProject').onchange = onCheckinProjectChange;
+
+      const shift = await fetchTodayWorkerShift(email);
+      if (shift) await renderCheckins(email);
+    }
+
+    async function handleStartShift() {
+      const btn = document.getElementById('startShiftBtn');
+      btn.disabled = true; btn.textContent = 'Starting…';
+      const result = await startWorkerShift();
+      if (result.ok) {
+        await renderCheckins(cinSession);
+      } else {
+        btn.disabled = false; btn.textContent = 'Start shift';
+        alert((result.data && (result.data.message || result.data.hint)) || 'Could not start your shift.');
+      }
+    }
+
+    async function renderCheckins(email) {
+      document.getElementById('shiftNotStarted').style.display = 'none';
+      document.getElementById('shiftStarted').style.display = 'block';
+      cinSlots = await fetchWorkerCheckinStatus({ email, date: new Date().toISOString().slice(0, 10) });
+      const grid = document.getElementById('checkinSlotGrid');
+      grid.innerHTML = cinSlots.map(s => `
+        <div class="checkin-slot">
+          ${flagChip(s.flag)}
+          <small>Check-in #${s.slot_index}<br>due ${escapeHtml(formatTime(s.due_at))}${s.submitted_at ? '<br>sent ' + escapeHtml(formatTime(s.submitted_at)) : ''}</small>
+        </div>`).join('');
+
+      const next = cinSlots.find(s => !s.submitted_at);
+      const formWrap = document.getElementById('checkinFormWrap');
+      const done = document.getElementById('allCheckinsDone');
+      if (next) {
+        formWrap.style.display = 'block';
+        done.style.display = 'none';
+        document.getElementById('nextSlotLabel').textContent = `check-in #${next.slot_index} (due ${formatTime(next.due_at)})`;
+      } else {
+        formWrap.style.display = 'none';
+        done.style.display = cinSlots.length ? 'block' : 'none';
+      }
+    }
+
+    async function onCheckinOwnerChange() {
+      const owner = document.getElementById('checkinOwner').value;
+      const projectSelect = document.getElementById('checkinProject');
+      const taskSelect = document.getElementById('checkinTask');
+      taskSelect.innerHTML = '<option value="">Select task (optional)…</option>';
+      if (!owner) { projectSelect.innerHTML = '<option value="">Select project (optional)…</option>'; return; }
+      if (!cinProjectsByOwner[owner]) cinProjectsByOwner[owner] = await fetchOwnerProjects(owner);
+      projectSelect.innerHTML = '<option value="">Select project (optional)…</option>' +
+        cinProjectsByOwner[owner].map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join('');
+    }
+
+    async function onCheckinProjectChange() {
+      const projectId = document.getElementById('checkinProject').value;
+      const taskSelect = document.getElementById('checkinTask');
+      taskSelect.innerHTML = '<option value="">Select task (optional)…</option>';
+      if (!projectId) return;
+      const tasks = await fetchProjectTasks(projectId);
+      taskSelect.innerHTML = '<option value="">Select task (optional)…</option>' +
+        tasks.map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.title)}</option>`).join('');
+    }
+
+    async function handleSubmitCheckin() {
+      const status = document.getElementById('checkinStatus');
+      const update = document.getElementById('checkinUpdate').value.trim();
+      if (!update) { status.textContent = 'An update is required.'; return; }
+      const btn = document.getElementById('submitCheckinBtn');
+      btn.disabled = true; btn.textContent = 'Submitting…';
+      const result = await submitWorkerCheckin({
+        owner_email: document.getElementById('checkinOwner').value || null,
+        project_id: document.getElementById('checkinProject').value || null,
+        task_id: document.getElementById('checkinTask').value || null,
+        update_text: update,
+        blockers: document.getElementById('checkinBlockers').value.trim() || null
+      });
+      btn.disabled = false; btn.textContent = 'Submit check-in';
+      if (result.ok) {
+        document.getElementById('checkinUpdate').value = '';
+        document.getElementById('checkinBlockers').value = '';
+        status.textContent = 'Check-in submitted.';
+        await renderCheckins(cinSession);
+      } else {
+        status.textContent = (result.data && (result.data.message || result.data.hint)) || 'Could not submit the check-in.';
+      }
+    }
+
+    // ===== Weekly task value declarations =====
+    function currentWeekRange() {
+      const now = new Date();
+      const day = (now.getDay() + 6) % 7; // 0 = Monday
+      const monday = new Date(now); monday.setDate(now.getDate() - day);
+      const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+      const iso = d => d.toISOString().slice(0, 10);
+      return { start: iso(monday), end: iso(sunday) };
+    }
+
+    async function initTaskValues(email) {
+      const ownerSelect = document.getElementById('tvOwner');
+      ownerSelect.innerHTML = '<option value="">Select assigned client…</option>' +
+        cinAssignments.map(a => `<option value="${escapeHtml(a.owner_email)}">${escapeHtml(a.owner_email)}</option>`).join('');
+      const range = currentWeekRange();
+      document.getElementById('tvWeekStart').value = range.start;
+      document.getElementById('tvWeekEnd').value = range.end;
+      await renderTaskValueHistory(email);
+    }
+
+    async function renderTaskValueHistory(email) {
+      const values = await fetchWeeklyTaskValues({ annotator: email });
+      let splitsByValue = {};
+      const approved = values.filter(v => v.status === 'approved' || v.status === 'paid');
+      for (const v of approved) {
+        const splits = await fetchTaskValueSplits(v.id);
+        splitsByValue[v.id] = splits.find(s => (s.beneficiary_email || '').toLowerCase() === email.toLowerCase());
+      }
+      renderRows('tvHistoryBody', values, 'No declarations yet.', v => {
+        const mine = splitsByValue[v.id];
+        return `
+        <tr>
+          <td>${escapeHtml(formatDate(v.week_start))} – ${escapeHtml(formatDate(v.week_end))}</td>
+          <td>${escapeHtml(v.owner_email)}</td>
+          <td>${escapeHtml(formatMoney(v.task_value_usd))}</td>
+          <td><span class="history-chip">${escapeHtml(v.status)}</span></td>
+          <td>${mine ? escapeHtml(formatMoney(mine.paid_amount_usd)) + ' / ' + escapeHtml(formatMoney(mine.amount_usd)) + ' (' + escapeHtml(mine.payment_status) + ')' : '-'}</td>
+        </tr>`;
+      });
+    }
+
+    async function handleDeclareTaskValue() {
+      const status = document.getElementById('tvStatus');
+      const owner = document.getElementById('tvOwner').value;
+      const value = document.getElementById('tvValue').value;
+      if (!owner || !value || Number(value) <= 0) { status.textContent = 'Pick a client and enter a value.'; return; }
+      const btn = document.getElementById('tvSubmitBtn');
+      btn.disabled = true; btn.textContent = 'Submitting…';
+      const result = await declareWeeklyTaskValue({
+        owner_email: owner,
+        week_start: document.getElementById('tvWeekStart').value,
+        week_end: document.getElementById('tvWeekEnd').value,
+        task_value_usd: value,
+        notes: document.getElementById('tvNotes').value.trim() || null
+      });
+      btn.disabled = false; btn.textContent = 'Submit declaration';
+      if (result.ok) {
+        status.textContent = 'Declaration submitted for review.';
+        document.getElementById('tvValue').value = '';
+        document.getElementById('tvNotes').value = '';
+        await renderTaskValueHistory(cinSession);
+      } else {
+        status.textContent = (result.data && (result.data.message || result.data.hint)) || 'Could not submit the declaration.';
+      }
+    }
+
+    // ===== Task feedback =====
+    async function initTaskFeedback(email) {
+      const tasks = await fetchTasksForAnnotator(email);
+      const card = document.getElementById('taskFeedbackCard');
+      const list = document.getElementById('taskFeedbackList');
+      if (!tasks.length) { card.style.display = 'none'; return; }
+      card.style.display = 'block';
+      list.innerHTML = tasks.map(t => `
+        <div class="task-feedback-item">
+          <strong style="font-size:14px;">${escapeHtml(t.title)}</strong>
+          <span class="history-chip" style="margin-left:8px;">${escapeHtml((t.status || '').replace('_',' '))}</span>
+          <div class="checkin-form">
+            <textarea id="fb-body-${t.id}" rows="2" placeholder="Progress note or question for the admin team"></textarea>
+            <select id="fb-status-${t.id}">
+              <option value="">No status change suggested</option>
+              <option value="todo">To do</option>
+              <option value="in_progress">In progress</option>
+              <option value="blocked">Blocked</option>
+              <option value="review">Review</option>
+              <option value="done">Done</option>
+            </select>
+            <button class="btn btn-outline" type="button" onclick="sendTaskFeedback('${t.id}','${escapeHtml(t.project_id)}')">Send feedback</button>
+            <span id="fb-status-msg-${t.id}" style="font-size:12px;color:var(--text-muted);"></span>
+          </div>
+        </div>`).join('');
+    }
+
+    async function sendTaskFeedback(taskId, projectId) {
+      const body = document.getElementById('fb-body-' + taskId).value.trim();
+      const msg = document.getElementById('fb-status-msg-' + taskId);
+      if (!body) { msg.textContent = 'Write a note first.'; return; }
+      msg.textContent = 'Sending…';
+      const ok = await saveTaskFeedback({
+        task_id: taskId,
+        project_id: projectId || null,
+        author_role: 'annotator',
+        body,
+        proposed_status: document.getElementById('fb-status-' + taskId).value || null
+      });
+      msg.textContent = ok ? 'Feedback sent.' : 'Could not send feedback.';
+      if (ok) document.getElementById('fb-body-' + taskId).value = '';
+    }
+
     (async function init() {
       const session = getSession();
       if (!session.accessToken || !session.email) {
@@ -398,6 +685,10 @@
         </tr>`);
 
       document.getElementById('dashboardBody').style.display = 'block';
+
+      await initCheckins(session.email);
+      await initTaskValues(session.email);
+      await initTaskFeedback(session.email);
     })();
   </script>
   <a href="support.html" class="support-fab" aria-label="Get support">

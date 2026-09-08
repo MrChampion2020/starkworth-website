@@ -375,6 +375,363 @@ async function fetchWeeklyTaskAssignmentsAll() {
   return fetchTableRows('weekly_task_assignments', 'order=week_start.desc,created_at.desc');
 }
 
+// ===== Account operations: assignments, projects, tasks, check-ins =====
+// Backed by supabase/account_operations.sql. All reads go through RLS, so a
+// worker/owner token only ever sees its own rows; an admin token sees all.
+
+// ---- Account-owner <-> annotator assignments ----
+async function fetchAnnotatorAssignmentsAll() {
+  return fetchTableRows('annotator_owner_assignments', 'order=created_at.desc');
+}
+
+async function fetchAssignmentsForAnnotator(email, activeOnly = true) {
+  const query = `annotator_email=eq.${escapeQuery((email || '').toLowerCase())}` +
+    (activeOnly ? '&status=eq.active' : '') + '&order=created_at.desc';
+  return fetchTableRows('annotator_owner_assignments', query);
+}
+
+async function fetchAssignmentsForOwner(email, activeOnly = true) {
+  const query = `owner_email=eq.${escapeQuery((email || '').toLowerCase())}` +
+    (activeOnly ? '&status=eq.active' : '') + '&order=created_at.desc';
+  return fetchTableRows('annotator_owner_assignments', query);
+}
+
+async function saveAnnotatorAssignment(data) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/annotator_owner_assignments?on_conflict=annotator_email,owner_email`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({
+      annotator_email: (data.annotator_email || '').toLowerCase(),
+      owner_email: (data.owner_email || '').toLowerCase(),
+      status: data.status || 'active',
+      ended_at: null,
+      notes: data.notes || null
+    })
+  });
+  return { ok: response.ok, error: response.ok ? null : await response.json().catch(() => ({})) };
+}
+
+async function updateAnnotatorAssignment(id, data) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/annotator_owner_assignments?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: { ...getAuthHeaders(), 'Prefer': 'return=minimal' },
+    body: JSON.stringify(data)
+  });
+  return response.ok;
+}
+
+async function endAnnotatorAssignment(id) {
+  return updateAnnotatorAssignment(id, { status: 'ended', ended_at: new Date().toISOString() });
+}
+
+async function reassignOwner(payload) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/reassign_owner`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      p_owner_email: payload.owner_email,
+      p_from_annotator: payload.from_annotator || null,
+      p_to_annotator: payload.to_annotator,
+      p_notes: payload.notes || null
+    })
+  });
+  return { ok: response.ok, data: await response.json().catch(() => null) };
+}
+
+// ---- Owner projects ----
+async function fetchOwnerProjectsAll() {
+  return fetchTableRows('owner_projects', 'order=created_at.desc');
+}
+
+async function fetchOwnerProjects(ownerEmail) {
+  const query = ownerEmail
+    ? `owner_email=eq.${escapeQuery(ownerEmail.toLowerCase())}&order=created_at.desc`
+    : 'order=created_at.desc';
+  return fetchTableRows('owner_projects', query);
+}
+
+async function saveOwnerProject(data) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/owner_projects`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Prefer': 'return=minimal' },
+    body: JSON.stringify({
+      owner_email: (data.owner_email || '').toLowerCase(),
+      name: data.name,
+      description: data.description || null,
+      status: data.status || 'active',
+      priority: data.priority || 'normal',
+      created_by: (getSession().email || 'admin').toLowerCase()
+    })
+  });
+  return { ok: response.ok, error: response.ok ? null : await response.json().catch(() => ({})) };
+}
+
+async function updateOwnerProject(id, data) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/owner_projects?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: { ...getAuthHeaders(), 'Prefer': 'return=minimal' },
+    body: JSON.stringify(data)
+  });
+  return response.ok;
+}
+
+async function deleteOwnerProject(id) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/owner_projects?id=eq.${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  return response.ok;
+}
+
+// ---- Project tasks ----
+async function fetchProjectTasksAll() {
+  return fetchTableRows('project_tasks', 'order=created_at.desc');
+}
+
+async function fetchProjectTasks(projectId) {
+  return fetchTableRows('project_tasks', `project_id=eq.${projectId}&order=created_at.desc`);
+}
+
+async function fetchTasksForAnnotator(email) {
+  return fetchTableRows('project_tasks', `assigned_annotator_email=eq.${escapeQuery((email || '').toLowerCase())}&order=created_at.desc`);
+}
+
+async function saveProjectTask(data) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/project_tasks`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Prefer': 'return=minimal' },
+    body: JSON.stringify({
+      project_id: data.project_id,
+      title: data.title,
+      details: data.details || null,
+      assigned_annotator_email: data.assigned_annotator_email
+        ? data.assigned_annotator_email.toLowerCase() : null,
+      status: data.status || 'todo',
+      due_at: data.due_at || null,
+      created_by: (getSession().email || 'admin').toLowerCase()
+    })
+  });
+  return { ok: response.ok, error: response.ok ? null : await response.json().catch(() => ({})) };
+}
+
+async function updateProjectTask(id, data) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/project_tasks?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: { ...getAuthHeaders(), 'Prefer': 'return=minimal' },
+    body: JSON.stringify(data)
+  });
+  return response.ok;
+}
+
+async function deleteProjectTask(id) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/project_tasks?id=eq.${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  return response.ok;
+}
+
+// ---- Task feedback ----
+async function fetchTaskFeedbackAll() {
+  return fetchTableRows('task_feedback', 'order=created_at.desc');
+}
+
+async function fetchTaskFeedback(taskId) {
+  return fetchTableRows('task_feedback', `task_id=eq.${taskId}&order=created_at.desc`);
+}
+
+async function saveTaskFeedback(data) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/task_feedback`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Prefer': 'return=minimal' },
+    body: JSON.stringify({
+      task_id: data.task_id,
+      project_id: data.project_id || null,
+      author_email: (getSession().email || '').toLowerCase(),
+      author_role: data.author_role || 'annotator',
+      body: data.body,
+      proposed_status: data.proposed_status || null
+    })
+  });
+  return response.ok;
+}
+
+// ---- Annotator shifts and 90-minute check-ins ----
+async function startWorkerShift() {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/start_worker_shift`, {
+    method: 'POST', headers: getAuthHeaders(), body: '{}'
+  });
+  return { ok: response.ok, data: await response.json().catch(() => null) };
+}
+
+async function fetchTodayWorkerShift(email) {
+  const today = new Date().toISOString().slice(0, 10);
+  const rows = await fetchTableRows('worker_shifts',
+    `worker_email=eq.${escapeQuery((email || '').toLowerCase())}&shift_date=eq.${today}&limit=1`);
+  return rows[0] || null;
+}
+
+// Reads the worker_checkin_status view. Filter by { email, date, ownerEmail }.
+async function fetchWorkerCheckinStatus(opts = {}) {
+  const parts = [];
+  if (opts.email) parts.push(`worker_email=eq.${escapeQuery(opts.email.toLowerCase())}`);
+  if (opts.date) parts.push(`shift_date=eq.${opts.date}`);
+  if (opts.ownerEmail) parts.push(`owner_email=eq.${escapeQuery(opts.ownerEmail.toLowerCase())}`);
+  parts.push('order=due_at.asc');
+  return fetchTableRows('worker_checkin_status', parts.join('&'));
+}
+
+async function submitWorkerCheckin(payload) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/submit_worker_checkin`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      p_slot_index: payload.slot_index ?? null,
+      p_owner_email: payload.owner_email || null,
+      p_project_id: payload.project_id || null,
+      p_task_id: payload.task_id || null,
+      p_update_text: payload.update_text || null,
+      p_blockers: payload.blockers || null
+    })
+  });
+  return { ok: response.ok, data: await response.json().catch(() => null) };
+}
+
+// ===== Weekly task values, payout splits, payments =====
+// Backed by supabase/task_value_splits.sql.
+
+// ---- Account participants (admin-maintained extra beneficiaries) ----
+async function fetchAccountParticipantsAll() {
+  return fetchTableRows('account_participants', 'order=owner_email.asc,created_at.desc');
+}
+
+async function fetchAccountParticipants(ownerEmail, activeOnly = true) {
+  const query = `owner_email=eq.${escapeQuery((ownerEmail || '').toLowerCase())}` +
+    (activeOnly ? '&active=eq.true' : '') + '&order=created_at.desc';
+  return fetchTableRows('account_participants', query);
+}
+
+async function saveAccountParticipant(data) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/account_participants`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Prefer': 'return=minimal' },
+    body: JSON.stringify({
+      owner_email: (data.owner_email || '').toLowerCase(),
+      beneficiary_label: data.beneficiary_label,
+      beneficiary_email: data.beneficiary_email ? data.beneficiary_email.toLowerCase() : null,
+      role: data.role || 'other',
+      default_pct: Number(data.default_pct || 0),
+      payout_destination: data.payout_destination || null,
+      notes: data.notes || null
+    })
+  });
+  return { ok: response.ok, error: response.ok ? null : await response.json().catch(() => ({})) };
+}
+
+async function updateAccountParticipant(id, data) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/account_participants?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: { ...getAuthHeaders(), 'Prefer': 'return=minimal' },
+    body: JSON.stringify(data)
+  });
+  return response.ok;
+}
+
+async function deleteAccountParticipant(id) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/account_participants?id=eq.${id}`, {
+    method: 'DELETE', headers: getAuthHeaders()
+  });
+  return response.ok;
+}
+
+// ---- Weekly task value declarations ----
+async function declareWeeklyTaskValue(payload) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/declare_weekly_task_value`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      p_owner_email: payload.owner_email,
+      p_week_start: payload.week_start,
+      p_week_end: payload.week_end,
+      p_task_value_usd: Number(payload.task_value_usd),
+      p_notes: payload.notes || null
+    })
+  });
+  return { ok: response.ok, data: await response.json().catch(() => null) };
+}
+
+async function fetchWeeklyTaskValues(opts = {}) {
+  const parts = [];
+  if (opts.annotator) parts.push(`annotator_email=eq.${escapeQuery(opts.annotator.toLowerCase())}`);
+  if (opts.owner) parts.push(`owner_email=eq.${escapeQuery(opts.owner.toLowerCase())}`);
+  if (opts.status) parts.push(`status=eq.${escapeQuery(opts.status)}`);
+  parts.push('order=week_start.desc,created_at.desc');
+  return fetchTableRows('weekly_task_values', parts.join('&'));
+}
+
+async function fetchWeeklyTaskValuesAll() {
+  return fetchTableRows('weekly_task_values', 'order=week_start.desc,created_at.desc');
+}
+
+async function approveWeeklyTaskValue({ id, splits, review_notes }) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/approve_weekly_task_value`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ p_id: id, p_splits: splits, p_review_notes: review_notes || null })
+  });
+  return { ok: response.ok, data: await response.json().catch(() => null) };
+}
+
+async function rejectWeeklyTaskValue({ id, notes }) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/reject_weekly_task_value`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ p_id: id, p_notes: notes || null })
+  });
+  return { ok: response.ok, data: await response.json().catch(() => null) };
+}
+
+// ---- Splits, payments, reconciliation ----
+async function fetchTaskValueSplits(taskValueId) {
+  return fetchTableRows('task_value_splits', `task_value_id=eq.${taskValueId}&order=created_at.asc`);
+}
+
+async function fetchTaskValueSplitsAll() {
+  return fetchTableRows('task_value_splits', 'order=owner_email.asc,created_at.desc');
+}
+
+async function fetchPendingSplitsAll() {
+  return fetchTableRows('task_value_splits', 'payment_status=neq.paid&order=owner_email.asc,created_at.desc');
+}
+
+async function recordSplitPayment(payload) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/record_split_payment`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      p_split_id: payload.split_id,
+      p_amount_usd: Number(payload.amount_usd),
+      p_paid_at: payload.paid_at || null,
+      p_method: payload.method || null,
+      p_reference: payload.reference || null,
+      p_notes: payload.notes || null
+    })
+  });
+  return { ok: response.ok, data: await response.json().catch(() => null) };
+}
+
+async function fetchSplitPayments(splitId) {
+  return fetchTableRows('task_value_payments', `split_id=eq.${splitId}&order=paid_at.desc`);
+}
+
+async function fetchTaskValueReconciliation(opts = {}) {
+  const parts = [];
+  if (opts.owner) parts.push(`owner_email=eq.${escapeQuery(opts.owner.toLowerCase())}`);
+  if (opts.status) parts.push(`status=eq.${escapeQuery(opts.status)}`);
+  parts.push('order=week_start.desc');
+  return fetchTableRows('task_value_reconciliation', parts.join('&'));
+}
+
 // ===== Mena Live Chat (admin only) =====
 // Guests never read/write this table directly (see
 // supabase/mena_chat_schema.sql for why) — only authenticated admins,
