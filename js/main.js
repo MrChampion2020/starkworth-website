@@ -15,10 +15,13 @@ const mobileMenu = document.getElementById('mobileMenu');
   mobilePortalLinks.forEach((portalLink) => portalLink.remove());
   const wrapper = document.createElement('div');
   wrapper.className = 'profile-nav';
-  const sessionEmail = sessionStorage.getItem('sw_user_email');
-  const portalType = sessionStorage.getItem('sw_portal_type');
+  // Logins persist in localStorage (see js/supabase.js), so read there first
+  // and fall back to sessionStorage for older sessions.
+  const persisted = (key) => { try { return localStorage.getItem(key); } catch (_) { return null; } };
+  const sessionEmail = persisted('sw_user_email') || sessionStorage.getItem('sw_user_email');
+  const portalType = persisted('sw_portal_type') || sessionStorage.getItem('sw_portal_type');
   const dashboardHref = portalType === 'worker' ? `${pageRoot}worker-dashboard.html` : portalType === 'affiliate' ? `${pageRoot}affiliate-dashboard.html` : `${pageRoot}client-dashboard.html`;
-  const sessionName = sessionStorage.getItem('sw_user_name') || '';
+  const sessionName = persisted('sw_user_name') || sessionStorage.getItem('sw_user_name') || '';
   wrapper.innerHTML = `<button class="profile-nav-trigger" type="button" aria-expanded="false" aria-controls="profilePortalMenu" aria-label="Open profile menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg><span>${sessionEmail ? 'Account' : 'Login'}</span></button><div class="profile-portal-menu" id="profilePortalMenu" hidden>${sessionEmail ? `<a class="profile-dashboard-link" href="${dashboardHref}">${sessionName || 'Account'}</a>` : '<span class="profile-menu-title">Choose a portal</span><a href="' + pageRoot + 'client-portal.html">Account Owner</a><a href="' + pageRoot + 'worker-login.html">Worker</a><a href="' + pageRoot + 'affiliate.html">Affiliate</a>'}</div>`;
   navContainer.appendChild(wrapper);
   const trigger = wrapper.querySelector('.profile-nav-trigger');
@@ -43,6 +46,7 @@ const mobileMenu = document.getElementById('mobileMenu');
   window.updateProfileMenuName = (name) => {
     if (!name) return;
     sessionStorage.setItem('sw_user_name', name);
+    try { localStorage.setItem('sw_user_name', name); } catch (_) {}
     wrapper.querySelector('.profile-nav-trigger span').textContent = 'Account';
     const link = wrapper.querySelector('.profile-dashboard-link');
     if (link) link.textContent = name;

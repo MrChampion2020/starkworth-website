@@ -447,7 +447,7 @@
       if (!owner) { projectSelect.innerHTML = '<option value="">Select project (optional)…</option>'; return; }
       if (!cinProjectsByOwner[owner]) cinProjectsByOwner[owner] = await fetchOwnerProjects(owner);
       projectSelect.innerHTML = '<option value="">Select project (optional)…</option>' +
-        cinProjectsByOwner[owner].map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join('');
+        cinProjectsByOwner[owner].map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}${p.platform ? ' — ' + escapeHtml(p.platform) : ''}</option>`).join('');
     }
 
     async function onCheckinProjectChange() {
@@ -594,6 +594,7 @@
     }
 
     (async function init() {
+      await ensureFreshSession();
       const session = getSession();
       if (!session.accessToken || !session.email) {
         window.location.href = 'worker-login.html';

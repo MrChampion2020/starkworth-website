@@ -286,7 +286,7 @@ begin
     v_total_pct := v_total_pct + coalesce((line ->> 'pct')::numeric, 0);
   end loop;
   if v_total_pct > 100.0001 then
-    raise exception 'Split percentages total %%, which exceeds 100', round(v_total_pct, 2);
+    raise exception 'Split percentages total % (over 100)', round(v_total_pct, 2);
   end if;
 
   delete from public.task_value_splits where task_value_id = p_id;

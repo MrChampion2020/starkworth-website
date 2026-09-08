@@ -355,7 +355,7 @@
         const tasksByProject = await Promise.all(projects.map(p => fetchProjectTasks(p.id)));
         list.innerHTML = projects.map((p, i) => `
           <div class="owner-project">
-            <h4>${escapeHtml(p.name)} <span class="history-chip">${escapeHtml((p.status || '').replace('_',' '))}</span></h4>
+            <h4>${escapeHtml(p.name)}${p.platform ? ` <small style="color:var(--text-muted);font-weight:400;">${escapeHtml(p.platform)}</small>` : ''} <span class="history-chip">${escapeHtml((p.status || '').replace('_',' '))}</span></h4>
             ${p.description ? `<p style="font-size:13px;color:var(--text-muted);margin:4px 0;">${escapeHtml(p.description)}</p>` : ''}
             ${tasksByProject[i].length
               ? tasksByProject[i].map(t => `
@@ -428,6 +428,7 @@
     }
 
     (async function init() {
+      await ensureFreshSession();
       const session = getSession();
       if (!session.accessToken || !session.email) {
         window.location.href = 'client-portal.html';

@@ -41,6 +41,7 @@
     function money(value) { return formatUsd(value); }
     function safe(value) { const node = document.createElement('span'); node.textContent = value ?? ''; return node.innerHTML; }
     async function loadAffiliateDashboard() {
+      await ensureFreshSession();
       const session = getSession();
       if (!session.email || !session.accessToken) { location.href = 'affiliate.html'; return; }
       affiliateEmail = session.email;

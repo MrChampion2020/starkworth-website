@@ -2,6 +2,82 @@
 const SUPABASE_URL = 'https://mseywoukzrktdghstxwv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zZXl3b3VrenJrdGRnaHN0eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5NTgwMzUsImV4cCI6MjA5NTUzNDAzNX0.bTm6JRABNrmhd8TfioqOhBAcp5zhyojMZMWsnJ4MIo4';
 
+// ===== Persistent session =====
+// Logins are kept in localStorage (they survive closing the tab/browser) and
+// the refresh token is used to keep the session alive for at least 24 hours
+// from every login - in practice indefinitely until the user signs out. Also
+// bump "JWT expiry" to 86400 in the Supabase dashboard (Authentication ->
+// Sign In / Providers) so each access token itself lasts a full day.
+const SESSION_KEYS = ['sw_access_token', 'sw_refresh_token', 'sw_expires_at', 'sw_user_email', 'sw_portal_type', 'sw_user_name'];
+
+function _ls(action, key, value) {
+  try {
+    if (action === 'get') return localStorage.getItem(key);
+    if (action === 'set') { localStorage.setItem(key, value); return null; }
+    if (action === 'del') { localStorage.removeItem(key); return null; }
+  } catch (_) { return null; }
+}
+function _ss(action, key, value) {
+  try {
+    if (action === 'get') return sessionStorage.getItem(key);
+    if (action === 'set') { sessionStorage.setItem(key, value); return null; }
+    if (action === 'del') { sessionStorage.removeItem(key); return null; }
+  } catch (_) { return null; }
+}
+
+// Persist a token response ({ access_token, refresh_token, expires_at/expires_in, user }).
+function storeSession(data, emailOverride) {
+  if (!data) return;
+  const email = emailOverride || data.user?.email || data.email || getStoredEmail();
+  if (data.access_token) { _ls('set', 'sw_access_token', data.access_token); _ss('set', 'sw_access_token', data.access_token); }
+  if (data.refresh_token) _ls('set', 'sw_refresh_token', data.refresh_token);
+  const expMs = data.expires_at ? Number(data.expires_at) * 1000
+    : (data.expires_in ? Date.now() + Number(data.expires_in) * 1000 : Date.now() + 3600 * 1000);
+  _ls('set', 'sw_expires_at', String(expMs));
+  if (email) { _ls('set', 'sw_user_email', email); _ss('set', 'sw_user_email', email); }
+}
+
+function getStoredToken() {
+  return _ls('get', 'sw_access_token') || _ss('get', 'sw_access_token');
+}
+function getStoredEmail() {
+  return _ls('get', 'sw_user_email') || _ss('get', 'sw_user_email');
+}
+
+async function refreshSupabaseSession() {
+  const refreshToken = _ls('get', 'sw_refresh_token');
+  if (!refreshToken) return false;
+  try {
+    const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
+      body: JSON.stringify({ refresh_token: refreshToken })
+    });
+    if (!response.ok) return false;
+    const data = await response.json();
+    if (!data.access_token) return false;
+    storeSession(data);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+// Refresh when the token is missing, expired, or within 30 minutes of expiry.
+// Cheap to call on every page load and before anything that needs auth.
+let _sessionRefreshInFlight = null;
+async function ensureFreshSession() {
+  const token = getStoredToken();
+  const expiresAt = Number(_ls('get', 'sw_expires_at') || 0);
+  if (token && expiresAt && expiresAt - Date.now() > 30 * 60 * 1000) return true;
+  if (!_ls('get', 'sw_refresh_token')) return !!token;
+  if (!_sessionRefreshInFlight) {
+    _sessionRefreshInFlight = refreshSupabaseSession().finally(() => { _sessionRefreshInFlight = null; });
+  }
+  await _sessionRefreshInFlight;
+  return !!getStoredToken();
+}
+
 function formatUsd(value) {
   const amount = Number(value || 0);
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -27,7 +103,7 @@ function storeReferralCodeFromUrl() {
 
 async function getReferralCodeForSession() {
   const sessionCode = getStoredReferralCode();
-  const token = sessionStorage.getItem('sw_access_token');
+  const token = getStoredToken();
   if (!token) return sessionCode;
   try {
     const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` } });
@@ -62,7 +138,7 @@ async function fetchTableRows(table, query = '', headers = getAuthHeaders()) {
 // back to the public anon key. Use this for any request that should be
 // restricted to a signed-in admin (reading/updating/deleting records).
 function getAuthHeaders() {
-  const token = sessionStorage.getItem('sw_access_token');
+  const token = getStoredToken();
   return {
     'Content-Type': 'application/json',
     'apikey': SUPABASE_ANON_KEY,
@@ -457,6 +533,7 @@ async function saveOwnerProject(data) {
     body: JSON.stringify({
       owner_email: (data.owner_email || '').toLowerCase(),
       name: data.name,
+      platform: data.platform || null,
       description: data.description || null,
       status: data.status || 'active',
       priority: data.priority || 'normal',
@@ -732,6 +809,93 @@ async function fetchTaskValueReconciliation(opts = {}) {
   return fetchTableRows('task_value_reconciliation', parts.join('&'));
 }
 
+// ===== AI data annotation platforms (built-in list for project dropdowns) =====
+const ANNOTATION_PLATFORMS = [
+  'Outlier', 'Scale AI / Remotasks', 'Appen', 'DataAnnotation.tech', 'Mercor',
+  'Turing', 'Prolific', 'Toloka', 'Surge AI', 'Labelbox', 'iMerit', 'Alignerr',
+  'Invisible', 'Sigma', 'Other'
+];
+
+// ===== Worker shift settings (admin-set: hours, interval, cadence) =====
+async function fetchWorkerShiftSettingsAll() {
+  return fetchTableRows('worker_shift_settings', 'order=worker_email.asc');
+}
+
+async function fetchWorkerShiftSetting(email) {
+  const rows = await fetchTableRows('worker_shift_settings',
+    `worker_email=in.(${escapeQuery((email || '').toLowerCase())},*)`);
+  return rows.find(r => r.worker_email === (email || '').toLowerCase()) || rows.find(r => r.worker_email === '*') || null;
+}
+
+async function saveWorkerShiftSetting(payload) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/worker_shift_settings?on_conflict=worker_email`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({
+      worker_email: (payload.worker_email || '*').toLowerCase(),
+      shift_hours: Number(payload.shift_hours || 15),
+      interval_minutes: Number(payload.interval_minutes || 90),
+      assignment_mode: payload.assignment_mode || 'auto',
+      updated_by: (getSession().email || 'admin').toLowerCase()
+    })
+  });
+  return { ok: response.ok, error: response.ok ? null : await response.json().catch(() => ({})) };
+}
+
+async function deleteWorkerShiftSetting(email) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/worker_shift_settings?worker_email=eq.${escapeQuery(email.toLowerCase())}`, {
+    method: 'DELETE', headers: getAuthHeaders()
+  });
+  return response.ok;
+}
+
+// ===== Staff members & role permissions =====
+async function fetchStaffMembers() {
+  return fetchTableRows('starkworth_admins', 'order=created_at.desc');
+}
+
+async function fetchStaffRolePermissions() {
+  return fetchTableRows('staff_role_permissions', 'order=role.asc,permission_key.asc');
+}
+
+async function myStaffPermissions() {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/my_staff_permissions`, {
+    method: 'POST', headers: getAuthHeaders(), body: '{}'
+  });
+  if (!response.ok) return [];
+  const data = await response.json().catch(() => []);
+  return Array.isArray(data) ? data : [];
+}
+
+async function upsertStaffMember(payload) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/upsert_staff_member`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      p_email: payload.email,
+      p_display_name: payload.display_name || null,
+      p_role: payload.role || 'admin',
+      p_active: payload.active ?? true
+    })
+  });
+  return { ok: response.ok, data: await response.json().catch(() => null) };
+}
+
+async function deleteStaffMember(email) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/delete_staff_member`, {
+    method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ p_email: email })
+  });
+  return { ok: response.ok, data: await response.json().catch(() => null) };
+}
+
+async function setRolePermissions(role, keys) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/set_role_permissions`, {
+    method: 'POST', headers: getAuthHeaders(),
+    body: JSON.stringify({ p_role: role, p_keys: keys })
+  });
+  return { ok: response.ok, data: await response.json().catch(() => null) };
+}
+
 // ===== Mena Live Chat (admin only) =====
 // Guests never read/write this table directly (see
 // supabase/mena_chat_schema.sql for why) — only authenticated admins,
@@ -799,8 +963,7 @@ async function signUpAffiliate(email, password, fullName, referredByCode = '') {
   });
   const data = await response.json();
   if (response.ok && data.access_token) {
-    sessionStorage.setItem('sw_access_token', data.access_token);
-    sessionStorage.setItem('sw_user_email', email);
+    storeSession(data, email);
   }
   // Notification is deliberately best-effort and never changes signup success.
   if (response.ok) {
@@ -834,18 +997,17 @@ async function signInWithPassword(email, password) {
   });
   const data = await response.json();
   if (response.ok && data.access_token) {
-    sessionStorage.setItem('sw_access_token', data.access_token);
-    sessionStorage.setItem('sw_user_email', email);
+    storeSession(data, email);
   }
   return { ok: response.ok, data };
 }
 
 function setSessionPortalType(portalType) {
-  if (portalType) sessionStorage.setItem('sw_portal_type', portalType);
+  if (portalType) { _ls('set', 'sw_portal_type', portalType); _ss('set', 'sw_portal_type', portalType); }
 }
 
 function getSessionPortalType() {
-  return sessionStorage.getItem('sw_portal_type') || '';
+  return _ls('get', 'sw_portal_type') || _ss('get', 'sw_portal_type') || '';
 }
 
 async function signInAffiliate(email, password) {
@@ -884,24 +1046,25 @@ async function requestAffiliateWithdrawal(email, amountUsd, destination, portalT
 function getSession() {
   const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
   const hashToken = hash.get('access_token');
-  if (hashToken && !sessionStorage.getItem('sw_access_token')) {
+  if (hashToken && !getStoredToken()) {
     try {
       const payload = JSON.parse(atob(hashToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-      sessionStorage.setItem('sw_access_token', hashToken);
-      if (payload.email) sessionStorage.setItem('sw_user_email', payload.email);
+      storeSession({
+        access_token: hashToken,
+        refresh_token: hash.get('refresh_token') || null,
+        expires_in: Number(hash.get('expires_in')) || null,
+        email: payload.email
+      });
     } catch (_) {}
   }
   return {
-    accessToken: sessionStorage.getItem('sw_access_token'),
-    email: sessionStorage.getItem('sw_user_email')
+    accessToken: getStoredToken(),
+    email: getStoredEmail()
   };
 }
 
 function signOut() {
-  sessionStorage.removeItem('sw_access_token');
-  sessionStorage.removeItem('sw_user_email');
-  sessionStorage.removeItem('sw_portal_type');
-  sessionStorage.removeItem('sw_user_name');
+  SESSION_KEYS.forEach(k => { _ls('del', k); _ss('del', k); });
 }
 
 async function restoreOAuthSession() {
@@ -911,8 +1074,12 @@ async function restoreOAuthSession() {
   const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${accessToken}` } });
   if (!response.ok) return getSession();
   const user = await response.json();
-  sessionStorage.setItem('sw_access_token', accessToken);
-  sessionStorage.setItem('sw_user_email', user.email || '');
+  storeSession({
+    access_token: accessToken,
+    refresh_token: params.get('refresh_token') || null,
+    expires_in: Number(params.get('expires_in')) || null,
+    email: user.email || ''
+  });
   history.replaceState(null, document.title, window.location.pathname + window.location.search);
   return getSession();
 }
@@ -944,3 +1111,26 @@ async function updatePassword(newPassword, accessToken) {
   });
   return response.ok;
 }
+
+// ===== Keep the session alive =====
+// On every page load: migrate any old sessionStorage-only login into
+// localStorage, then refresh proactively. Repeat every 20 minutes while the
+// tab is open. Combined with the refresh token this holds a login well past
+// the 24-hour minimum.
+(function initPersistentSession() {
+  if (typeof window === 'undefined') return;
+  try {
+    if (!_ls('get', 'sw_access_token') && _ss('get', 'sw_access_token')) {
+      _ls('set', 'sw_access_token', _ss('get', 'sw_access_token'));
+      if (_ss('get', 'sw_user_email')) _ls('set', 'sw_user_email', _ss('get', 'sw_user_email'));
+      if (_ss('get', 'sw_portal_type')) _ls('set', 'sw_portal_type', _ss('get', 'sw_portal_type'));
+      // Unknown real expiry for a migrated token; assume it is near the end so
+      // the first ensureFreshSession() refreshes it.
+      if (!_ls('get', 'sw_expires_at')) _ls('set', 'sw_expires_at', String(Date.now() + 60 * 1000));
+    }
+  } catch (_) {}
+  if (getStoredToken()) {
+    ensureFreshSession();
+    setInterval(ensureFreshSession, 20 * 60 * 1000);
+  }
+})();

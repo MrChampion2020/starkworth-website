@@ -69,6 +69,10 @@ create table if not exists public.owner_projects (
   updated_at timestamptz not null default now()
 );
 
+-- Which AI data annotation platform this project runs on (Outlier, Scale AI, etc).
+-- The value list is a built-in constant in js/supabase.js (ANNOTATION_PLATFORMS).
+alter table public.owner_projects add column if not exists platform text;
+
 create index if not exists owner_projects_owner_idx on public.owner_projects (owner_email, created_at desc);
 
 drop trigger if exists owner_projects_touch on public.owner_projects;
@@ -121,12 +125,39 @@ create table if not exists public.worker_shifts (
   shift_date date not null default current_date,
   started_at timestamptz not null default now(),
   interval_minutes integer not null default 90 check (interval_minutes between 15 and 240),
-  scheduled_checkins integer not null default 4 check (scheduled_checkins between 1 and 12),
+  scheduled_checkins integer not null default 10,
   ended_at timestamptz,
   unique (worker_email, shift_date)
 );
 
+-- Widen the original 1..12 cap: a 15-hour shift at 90-minute check-ins is 10
+-- slots, but shorter intervals can need more.
+alter table public.worker_shifts drop constraint if exists worker_shifts_scheduled_checkins_check;
+alter table public.worker_shifts add constraint worker_shifts_scheduled_checkins_check
+  check (scheduled_checkins between 1 and 48);
+
 create index if not exists worker_shifts_email_idx on public.worker_shifts (worker_email, shift_date desc);
+
+-- Admin-set shift configuration. worker_email = '*' is the global default;
+-- a row for a specific email overrides it for that annotator. assignment_mode
+-- is a cadence label ('auto' = worker self-starts, which is always allowed;
+-- 'daily'/'weekly' just record how the admin intends to manage it).
+create table if not exists public.worker_shift_settings (
+  worker_email text primary key,
+  shift_hours numeric(4,1) not null default 15 check (shift_hours > 0 and shift_hours <= 24),
+  interval_minutes integer not null default 90 check (interval_minutes between 15 and 240),
+  assignment_mode text not null default 'auto' check (assignment_mode in ('auto', 'daily', 'weekly')),
+  updated_by text,
+  updated_at timestamptz not null default now()
+);
+
+insert into public.worker_shift_settings (worker_email) values ('*')
+on conflict (worker_email) do nothing;
+
+drop trigger if exists worker_shift_settings_touch on public.worker_shift_settings;
+create trigger worker_shift_settings_touch
+  before update on public.worker_shift_settings
+  for each row execute function public.set_updated_at_timestamp();
 
 create table if not exists public.worker_checkins (
   id uuid primary key default gen_random_uuid(),
@@ -194,6 +225,9 @@ as $$
 declare
   current_email text := lower(coalesce(auth.jwt() ->> 'email', ''));
   shift public.worker_shifts;
+  v_hours numeric;
+  v_interval integer;
+  v_slots integer;
   i integer;
 begin
   if current_email = '' then raise exception 'Authentication required'; end if;
@@ -201,8 +235,19 @@ begin
     raise exception 'Annotator profile not found';
   end if;
 
-  insert into public.worker_shifts (worker_email, shift_date)
-  values (current_email, current_date)
+  -- Resolve shift config: per-worker row, else global '*', else hard defaults.
+  select shift_hours, interval_minutes into v_hours, v_interval
+  from public.worker_shift_settings
+  where worker_email in (current_email, '*')
+  order by (worker_email = current_email) desc
+  limit 1;
+
+  v_hours := coalesce(v_hours, 15);
+  v_interval := coalesce(v_interval, 90);
+  v_slots := greatest(1, least(48, floor(v_hours * 60 / v_interval)::int));
+
+  insert into public.worker_shifts (worker_email, shift_date, interval_minutes, scheduled_checkins)
+  values (current_email, current_date, v_interval, v_slots)
   on conflict (worker_email, shift_date) do update set worker_email = excluded.worker_email
   returning * into shift;
 
@@ -314,6 +359,18 @@ alter table public.project_tasks enable row level security;
 alter table public.task_feedback enable row level security;
 alter table public.worker_shifts enable row level security;
 alter table public.worker_checkins enable row level security;
+alter table public.worker_shift_settings enable row level security;
+
+-- ---- worker_shift_settings ----
+drop policy if exists "admins manage shift settings" on public.worker_shift_settings;
+create policy "admins manage shift settings" on public.worker_shift_settings
+  for all to authenticated using (public.is_starkworth_admin()) with check (public.is_starkworth_admin());
+
+drop policy if exists "workers read shift settings" on public.worker_shift_settings;
+create policy "workers read shift settings" on public.worker_shift_settings
+  for select to authenticated using (
+    worker_email = '*' or lower(worker_email) = lower(auth.jwt() ->> 'email')
+  );
 
 -- ---- annotator_owner_assignments ----
 drop policy if exists "admins manage assignments" on public.annotator_owner_assignments;
@@ -441,7 +498,8 @@ grant select, insert, update, delete on
   public.project_tasks,
   public.task_feedback,
   public.worker_shifts,
-  public.worker_checkins
+  public.worker_checkins,
+  public.worker_shift_settings
 to authenticated;
 
 grant select on public.worker_checkin_status to authenticated;

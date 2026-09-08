@@ -146,6 +146,7 @@
           <button class="admin-tab-btn" onclick="showTab('affiliate', this)">Affiliate</button>
           <button class="admin-tab-btn" onclick="showTab('contacts', this)">Contacts</button>
           <button class="admin-tab-btn" onclick="showTab('livechat', this)">Live Chat <span id="liveChatBadge" style="display:none;background:#dc2626;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:4px;">0</span></button>
+          <button class="admin-tab-btn" onclick="showTab('staff', this)">Staff</button>
         </div>
         <div class="admin-profile-nav">
           <button class="admin-profile-trigger" type="button" aria-expanded="false" aria-controls="adminProfileMenu" aria-label="Open portal menu" onclick="toggleAdminProfileMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></button>
@@ -166,6 +167,7 @@
         <button class="admin-mobile-tab-btn" onclick="showTab('affiliate', this); closeAdminMenu();">Affiliate</button>
         <button class="admin-mobile-tab-btn" onclick="showTab('contacts', this); closeAdminMenu();">Contacts</button>
         <button class="admin-mobile-tab-btn" onclick="showTab('livechat', this); closeAdminMenu();">Live Chat</button>
+        <button class="admin-mobile-tab-btn" onclick="showTab('staff', this); closeAdminMenu();">Staff</button>
       </div>
     </nav>
 
@@ -340,6 +342,10 @@
             <input type="text" id="projectName" placeholder="Project name" />
           </div>
           <div class="form-group">
+            <label>AI annotation platform</label>
+            <select id="projectPlatform"><option value="">Select platform…</option></select>
+          </div>
+          <div class="form-group">
             <label>Status</label>
             <select id="projectStatus">
               <option value="planning">Planning</option>
@@ -373,10 +379,10 @@
         <div class="admin-table-wrapper">
           <table class="admin-table">
             <thead>
-              <tr><th>Owner</th><th>Project</th><th>Priority</th><th>Status</th><th>Created</th><th>Action</th></tr>
+              <tr><th>Owner</th><th>Project</th><th>Platform</th><th>Priority</th><th>Status</th><th>Created</th><th>Action</th></tr>
             </thead>
             <tbody id="projectsTableBody">
-              <tr><td colspan="6" class="admin-table-empty">No projects yet.</td></tr>
+              <tr><td colspan="7" class="admin-table-empty">No projects yet.</td></tr>
             </tbody>
           </table>
         </div>
@@ -454,6 +460,37 @@
             <tbody id="reportsAlertsBody">
               <tr><td colspan="5" class="admin-table-empty">No open alerts.</td></tr>
             </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="settings-panel" style="margin-top:20px;">
+        <h3>Shift settings</h3>
+        <p>Set the working shift length and how often annotators must check in. A per-annotator row overrides the global default. Annotators always start their own shift when they sign in; the mode is a cadence label.</p>
+        <div class="settings-grid">
+          <div class="form-group">
+            <label>Annotator (blank = global default)</label>
+            <select id="shiftSetWorker"><option value="*">Global default</option></select>
+          </div>
+          <div class="form-group"><label>Shift hours</label><input type="number" id="shiftSetHours" min="1" max="24" step="0.5" value="15" /></div>
+          <div class="form-group"><label>Check-in interval (minutes)</label><input type="number" id="shiftSetInterval" min="15" max="240" step="5" value="90" /></div>
+          <div class="form-group">
+            <label>Assignment mode</label>
+            <select id="shiftSetMode">
+              <option value="auto">Auto (worker self-starts)</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+            </select>
+          </div>
+        </div>
+        <div class="settings-actions">
+          <button class="btn btn-primary" type="button" onclick="saveShiftSettingForm()">Save shift setting</button>
+          <span id="shiftSetStatus" style="font-size:13px;color:var(--text-muted);"></span>
+        </div>
+        <div class="admin-table-wrapper" style="margin-top:16px;">
+          <table class="admin-table">
+            <thead><tr><th>Annotator</th><th>Hours</th><th>Interval</th><th>Slots/shift</th><th>Mode</th><th>Action</th></tr></thead>
+            <tbody id="shiftSettingsBody"><tr><td colspan="6" class="admin-table-empty">No shift settings yet.</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -919,6 +956,62 @@
       </div>
     </div>
 
+    <!-- STAFF TAB -->
+    <div id="tab-staff" class="admin-tab-content admin-container" style="display:none;">
+      <div class="admin-page-title">
+        <h1>Staff &amp; Roles</h1>
+        <p>Give people access to this dashboard with a role, and choose which areas each role can open. CEO and super&nbsp;admin always have full access.</p>
+      </div>
+
+      <div class="settings-panel">
+        <h3>Add / update a staff member</h3>
+        <div class="settings-grid">
+          <div class="form-group">
+            <label>Existing annotator (optional)</label>
+            <select id="staffWorkerPick"><option value="">— pick to fill email —</option></select>
+          </div>
+          <div class="form-group"><label>Email</label><input type="email" id="staffEmail" placeholder="person@example.com" /></div>
+          <div class="form-group"><label>Display name</label><input type="text" id="staffName" placeholder="Full name" /></div>
+          <div class="form-group">
+            <label>Role</label>
+            <input type="text" id="staffRole" list="staffRoleList" placeholder="admin" />
+            <datalist id="staffRoleList">
+              <option value="super_admin"></option><option value="ceo"></option><option value="coo"></option>
+              <option value="admin"></option><option value="manager"></option><option value="secretary"></option>
+              <option value="finance"></option><option value="support"></option>
+            </datalist>
+          </div>
+        </div>
+        <div class="settings-actions">
+          <button class="btn btn-primary" type="button" onclick="addStaffForm()">Save staff member</button>
+          <span id="staffFormStatus" style="font-size:13px;color:var(--text-muted);"></span>
+        </div>
+      </div>
+
+      <div class="admin-card" style="margin-top:20px;">
+        <div class="admin-card-header"><h3>Staff members</h3></div>
+        <div class="admin-table-wrapper">
+          <table class="admin-table">
+            <thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Active</th><th>Action</th></tr></thead>
+            <tbody id="staffTableBody"><tr><td colspan="5" class="admin-table-empty">No staff yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="admin-card" style="margin-top:20px;">
+        <div class="admin-card-header">
+          <h3>Role access</h3>
+          <span style="font-size:12px;color:var(--text-muted);">Tick the dashboard areas each role may open</span>
+        </div>
+        <div class="admin-table-wrapper">
+          <table class="admin-table" id="rolePermMatrix">
+            <thead><tr id="rolePermHead"><th>Role</th></tr></thead>
+            <tbody id="rolePermBody"><tr><td class="admin-table-empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <script src="../js/supabase.js"></script>
@@ -1053,6 +1146,7 @@
       if (tabName === 'projects') loadProjectsData();
       if (tabName === 'reports') loadReportsData();
       if (tabName === 'payments') loadPaymentsData();
+      if (tabName === 'staff') loadStaffData();
     }
 
     // Approve or Deactivate worker
@@ -1239,7 +1333,7 @@
         headers: {
           'Content-Type': 'application/json',
           'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${sessionStorage.getItem('sw_access_token') || SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${getStoredToken() || SUPABASE_ANON_KEY}`,
           'Prefer': 'return=minimal'
         },
         body: JSON.stringify({
@@ -1286,7 +1380,7 @@
         headers: {
           'Content-Type': 'application/json',
           'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${sessionStorage.getItem('sw_access_token') || SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${getStoredToken() || SUPABASE_ANON_KEY}`,
           'Prefer': 'resolution=merge-duplicates,return=minimal'
         },
         body: JSON.stringify({
@@ -1324,6 +1418,7 @@
       loadLiveChats();
       loadReportsData();
       loadPaymentsData();
+      applyStaffPermissions();
 
       document.getElementById('statAgreements').textContent = agreements.length;
       document.getElementById('statWorkers').textContent = workers.length;
@@ -1696,9 +1791,14 @@
       const owner = document.getElementById('assignOwnerEmail').value;
       if (!annotator || !owner) { status.textContent = 'Pick both an annotator and an account owner.'; return; }
       status.textContent = 'Saving…';
-      const { ok } = await saveAnnotatorAssignment({ annotator_email: annotator, owner_email: owner, notes: document.getElementById('assignNotes').value.trim() });
-      status.textContent = ok ? 'Assignment saved.' : 'Could not save assignment.';
-      if (ok) { document.getElementById('assignNotes').value = ''; loadAssignmentsData(); }
+      const res = await saveAnnotatorAssignment({ annotator_email: annotator, owner_email: owner, notes: document.getElementById('assignNotes').value.trim() });
+      status.textContent = res.ok ? 'Assignment saved.' : ('Could not save: ' + errText(res.error));
+      if (res.ok) { document.getElementById('assignNotes').value = ''; loadAssignmentsData(); }
+    }
+
+    function errText(error) {
+      if (!error) return 'unknown error (is the migration applied and your email in starkworth_admins?)';
+      return error.message || error.hint || error.details || error.code || JSON.stringify(error);
     }
 
     async function endAssignmentRow(id) {
@@ -1716,14 +1816,27 @@
     }
 
     // ---- Projects ----
+    function platformOptions(selected) {
+      return `<option value="">—</option>` + ANNOTATION_PLATFORMS.map(p =>
+        `<option value="${escapeHtml(p)}" ${p === selected ? 'selected' : ''}>${escapeHtml(p)}</option>`).join('');
+    }
+
     async function loadProjectsData() {
       await ensureAdminDirectories();
       fillSelect('projectOwnerEmail', adminOwnerCache, 'email', ownerLabel, 'Select account owner…');
+      const platSelect = document.getElementById('projectPlatform');
+      if (platSelect && platSelect.options.length <= 1) platSelect.innerHTML = '<option value="">Select platform…</option>' +
+        ANNOTATION_PLATFORMS.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
       const projects = await fetchOwnerProjectsAll();
       renderTableBody('projectsTableBody', projects, 'No projects yet.', row => `
         <tr>
           <td>${escapeHtml(row.owner_email)}</td>
           <td><button class="admin-mini-btn primary" onclick="openProjectTasks('${row.id}','${escapeHtml(row.owner_email)}','${escapeHtml(row.name)}')">${escapeHtml(row.name)}</button></td>
+          <td>
+            <select class="admin-inline-select" onchange="changeProjectPlatform('${row.id}', this.value)">
+              ${platformOptions(row.platform)}
+            </select>
+          </td>
           <td>${escapeHtml(row.priority)}</td>
           <td>
             <select class="admin-inline-select" onchange="changeProjectStatus('${row.id}', this.value)">
@@ -1732,7 +1845,7 @@
           </td>
           <td>${escapeHtml(formatDate(row.created_at))}</td>
           <td><button class="admin-mini-btn danger" onclick="deleteProjectRow('${row.id}')">Delete</button></td>
-        </tr>`, 6);
+        </tr>`, 7);
     }
 
     async function createProjectForm() {
@@ -1741,18 +1854,23 @@
       const name = document.getElementById('projectName').value.trim();
       if (!owner || !name) { msg.textContent = 'Pick an account owner and name the project.'; return; }
       msg.textContent = 'Saving…';
-      const { ok } = await saveOwnerProject({
+      const res = await saveOwnerProject({
         owner_email: owner, name,
+        platform: document.getElementById('projectPlatform').value || null,
         description: document.getElementById('projectDescription').value.trim(),
         status: document.getElementById('projectStatus').value,
         priority: document.getElementById('projectPriority').value
       });
-      msg.textContent = ok ? 'Project created.' : 'Could not create project.';
-      if (ok) { document.getElementById('projectName').value = ''; document.getElementById('projectDescription').value = ''; loadProjectsData(); }
+      msg.textContent = res.ok ? 'Project created.' : ('Could not create project: ' + errText(res.error));
+      if (res.ok) { document.getElementById('projectName').value = ''; document.getElementById('projectDescription').value = ''; loadProjectsData(); }
     }
 
     async function changeProjectStatus(id, value) {
       if (!(await updateOwnerProject(id, { status: value }))) alert('Could not update project status.');
+    }
+
+    async function changeProjectPlatform(id, value) {
+      if (!(await updateOwnerProject(id, { platform: value || null }))) alert('Could not update the platform.');
     }
 
     async function deleteProjectRow(id) {
@@ -1912,6 +2030,49 @@
           <td>${escapeHtml(a.severity)}</td>
           <td>${escapeHtml(formatDate(a.created_at))}</td>
         </tr>`, 5);
+
+      loadShiftSettings();
+    }
+
+    async function loadShiftSettings() {
+      await ensureAdminDirectories();
+      fillSelect('shiftSetWorker', adminWorkerCache, 'email', workerLabel, 'Global default');
+      const sel = document.getElementById('shiftSetWorker');
+      if (sel && !Array.from(sel.options).some(o => o.value === '*')) {
+        sel.insertAdjacentHTML('afterbegin', '<option value="*">Global default</option>');
+      }
+      const rows = await fetchWorkerShiftSettingsAll();
+      renderTableBody('shiftSettingsBody', rows, 'No shift settings yet.', r => {
+        const slots = Math.max(1, Math.min(48, Math.floor(Number(r.shift_hours) * 60 / Number(r.interval_minutes))));
+        return `
+        <tr>
+          <td>${r.worker_email === '*' ? 'Global default' : escapeHtml(r.worker_email)}</td>
+          <td>${escapeHtml(String(r.shift_hours))}</td>
+          <td>${escapeHtml(String(r.interval_minutes))} min</td>
+          <td>${slots}</td>
+          <td>${escapeHtml(r.assignment_mode)}</td>
+          <td>${r.worker_email === '*' ? '' : `<button class="admin-mini-btn danger" onclick="deleteShiftSettingRow('${escapeHtml(r.worker_email)}')">Delete</button>`}</td>
+        </tr>`;
+      }, 6);
+    }
+
+    async function saveShiftSettingForm() {
+      const status = document.getElementById('shiftSetStatus');
+      status.textContent = 'Saving…';
+      const res = await saveWorkerShiftSetting({
+        worker_email: document.getElementById('shiftSetWorker').value || '*',
+        shift_hours: document.getElementById('shiftSetHours').value,
+        interval_minutes: document.getElementById('shiftSetInterval').value,
+        assignment_mode: document.getElementById('shiftSetMode').value
+      });
+      status.textContent = res.ok ? 'Shift setting saved.' : ('Could not save: ' + errText(res.error));
+      if (res.ok) loadShiftSettings();
+    }
+
+    async function deleteShiftSettingRow(email) {
+      if (!confirm('Delete this override? The annotator will fall back to the global default.')) return;
+      if (await deleteWorkerShiftSetting(email)) loadShiftSettings();
+      else alert('Could not delete the shift setting.');
     }
 
     setInterval(() => {
@@ -2218,6 +2379,125 @@
           </div>`;
       }).join('');
     }
+
+    // ===== Staff & roles =====
+    const STAFF_PERMISSION_KEYS = ['overview','agreements','workers','assignments','projects','reports','payments','affiliate','contacts','livechat','staff','manage_staff'];
+
+    async function applyStaffPermissions() {
+      let perms;
+      try { perms = await myStaffPermissions(); } catch (_) { perms = ['*']; }
+      // Empty result = not a recognised staff row yet; don't lock the user out of a
+      // dashboard they could already open (RLS still guards the data).
+      if (!perms || !perms.length || perms.includes('*')) return;
+      const allowed = new Set(perms);
+      document.querySelectorAll('.admin-tab-btn, .admin-mobile-tab-btn').forEach(btn => {
+        const m = (btn.getAttribute('onclick') || '').match(/showTab\('([a-z_]+)'/);
+        if (m && !allowed.has(m[1])) btn.style.display = 'none';
+      });
+      if (activeAdminTab && !allowed.has(activeAdminTab)) {
+        const first = STAFF_PERMISSION_KEYS.find(k => allowed.has(k) && document.getElementById('tab-' + k));
+        if (first) {
+          const btn = document.querySelector(`.admin-tab-btn[onclick*="'${first}'"]`);
+          showTab(first, btn);
+        }
+      }
+    }
+
+    async function loadStaffData() {
+      await ensureAdminDirectories();
+      fillSelect('staffWorkerPick', adminWorkerCache, 'email', workerLabel, '— pick to fill email —');
+      document.getElementById('staffWorkerPick').onchange = function () {
+        if (this.value) {
+          document.getElementById('staffEmail').value = this.value;
+          const w = adminWorkerCache.find(x => x.email === this.value);
+          if (w) document.getElementById('staffName').value = `${w.first_name || ''} ${w.last_name || ''}`.trim();
+        }
+      };
+
+      const [members, perms] = await Promise.all([fetchStaffMembers(), fetchStaffRolePermissions()]);
+
+      renderTableBody('staffTableBody', members, 'No staff yet.', m => `
+        <tr>
+          <td>${escapeHtml(m.email)}</td>
+          <td>${escapeHtml(m.display_name || '-')}</td>
+          <td><input class="admin-inline-select" style="width:120px;" value="${escapeHtml(m.role)}" onchange="changeStaffRole('${escapeHtml(m.email)}', this.value)"></td>
+          <td><button class="admin-mini-btn neutral" onclick="toggleStaffActive('${escapeHtml(m.email)}', ${m.active ? 'false' : 'true'})">${m.active ? 'Active' : 'Disabled'}</button></td>
+          <td><button class="admin-mini-btn danger" onclick="removeStaff('${escapeHtml(m.email)}')">Remove</button></td>
+        </tr>`, 5);
+
+      // Permission matrix: rows = roles present on staff or in the permission table.
+      const roles = Array.from(new Set([
+        ...members.map(m => m.role),
+        ...perms.map(p => p.role),
+        'super_admin','ceo','coo','admin','secretary'
+      ].filter(Boolean))).sort();
+      const permByRole = {};
+      perms.forEach(p => { (permByRole[p.role] = permByRole[p.role] || new Set()).add(p.permission_key); });
+
+      document.getElementById('rolePermHead').innerHTML = '<th>Role</th>' +
+        STAFF_PERMISSION_KEYS.map(k => `<th style="font-size:11px;">${escapeHtml(k.replace('_',' '))}</th>`).join('');
+      document.getElementById('rolePermBody').innerHTML = roles.map(role => {
+        const full = role === 'super_admin' || role === 'ceo';
+        return `<tr>
+          <td><strong>${escapeHtml(role)}</strong>${full ? ' <small style="color:var(--text-muted);">(always full)</small>' : ''}</td>
+          ${STAFF_PERMISSION_KEYS.map(k => `<td style="text-align:center;">
+            <input type="checkbox" data-role="${escapeHtml(role)}" data-key="${k}"
+              ${full || (permByRole[role] && permByRole[role].has(k)) ? 'checked' : ''}
+              ${full ? 'disabled' : ''}
+              onchange="saveRolePermission('${escapeHtml(role)}')">
+          </td>`).join('')}
+        </tr>`;
+      }).join('');
+    }
+
+    async function addStaffForm() {
+      const status = document.getElementById('staffFormStatus');
+      const email = document.getElementById('staffEmail').value.trim();
+      if (!email) { status.textContent = 'Enter an email.'; return; }
+      status.textContent = 'Saving…';
+      const res = await upsertStaffMember({
+        email,
+        display_name: document.getElementById('staffName').value.trim() || null,
+        role: document.getElementById('staffRole').value.trim() || 'admin'
+      });
+      status.textContent = res.ok ? 'Staff member saved.' : ('Could not save: ' + ((res.data && (res.data.message || res.data.hint)) || 'error'));
+      if (res.ok) { document.getElementById('staffEmail').value = ''; document.getElementById('staffName').value = ''; document.getElementById('staffRole').value = ''; loadStaffData(); }
+    }
+
+    async function changeStaffRole(email, role) {
+      const res = await upsertStaffMember({ email, role: role.trim() || 'admin' });
+      if (res.ok) loadStaffData(); else alert((res.data && (res.data.message || res.data.hint)) || 'Could not update the role.');
+    }
+    async function toggleStaffActive(email, active) {
+      const res = await upsertStaffMember({ email, active: active === true || active === 'true' });
+      if (res.ok) loadStaffData(); else alert((res.data && (res.data.message || res.data.hint)) || 'Could not update.');
+    }
+    async function removeStaff(email) {
+      if (!confirm('Remove this staff member\'s dashboard access?')) return;
+      const res = await deleteStaffMember(email);
+      if (res.ok) loadStaffData(); else alert((res.data && (res.data.message || res.data.hint)) || 'Could not remove.');
+    }
+
+    async function saveRolePermission(role) {
+      const keys = Array.from(document.querySelectorAll(`#rolePermBody input[type=checkbox][data-role="${CSS.escape(role)}"]:checked`))
+        .map(cb => cb.getAttribute('data-key'));
+      const res = await setRolePermissions(role, keys);
+      if (!res.ok) alert((res.data && (res.data.message || res.data.hint)) || 'Could not save role permissions.');
+    }
+
+    // Stay signed in: a stored session (kept for at least 24 hours) skips the
+    // password screen on return visits — but only for an actual staff account.
+    (async function restoreAdminSession() {
+      await ensureFreshSession();
+      const session = getSession();
+      if (!session.accessToken || !session.email) return;
+      let perms = [];
+      try { perms = await myStaffPermissions(); } catch (_) { perms = []; }
+      if (!perms || !perms.length) return; // signed in, but not staff
+      document.getElementById('adminLoginScreen').style.display = 'none';
+      document.getElementById('adminDashboard').style.display = 'block';
+      loadAdminData();
+    })();
   </script>
   <a href="support.html" class="support-fab" aria-label="Get support">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
