@@ -394,25 +394,17 @@ if (heroRotator) {
 (async function enhanceWorkerOperations() {
   if (!window.location.pathname.includes('worker-dashboard') || typeof getSession !== 'function') return;
   const session = getSession();
-  if (!session.email || typeof fetchWorkerDailyReports !== 'function') return;
+  if (!session.email || typeof fetchWorkerEmergencyAlerts !== 'function') return;
+  // The daily checklist + report now lives in its own dashboard panel
+  // (see pages/worker-dashboard.html). This block only surfaces open alerts.
   await checkWorkerDailyRoutine().catch(() => null);
-  const reports = await fetchWorkerDailyReports(session.email);
   const alerts = await fetchWorkerEmergencyAlerts(session.email);
+  if (!alerts.length) return;
   const panel = document.createElement('section');
   panel.className = 'worker-operations-panel';
-  panel.innerHTML = `<div class="worker-danger-mark ${alerts.length ? 'is-active' : ''}"><span aria-hidden="true">!</span><div><strong>${alerts.length ? 'Emergency attention required' : 'Daily routine status'}</strong><p>${alerts.length ? 'Review the alert below and contact the admin team if you cannot complete today\'s routine.' : 'Your six-hour daily routine is being monitored.'}</p></div></div><div class="worker-report-card"><h3>Daily task report</h3><p>Report all work completed today. The standard routine is six hours across assigned tasks.</p><form id="dailyWorkerReport"><label>Date<input type="date" name="report_date" required></label><label>Hours completed<input type="number" name="actual_hours" min="0" max="24" step="0.25" value="6" required></label><label>Tasks completed<input type="number" name="tasks_completed" min="0" step="1" value="0" required></label><label class="full">Task summary<textarea name="task_summary" rows="3" required placeholder="Describe the tasks completed"></textarea></label><label class="full">Blockers or support needed<textarea name="blockers" rows="2" placeholder="Tell the admin team what is blocking you"></textarea></label><button class="btn btn-primary" type="submit">Submit daily report</button><span class="worker-report-status" role="status"></span></form></div><div class="worker-alert-list"><h3>Emergency alerts</h3>${alerts.length ? alerts.map(alert => `<div class="worker-alert-row"><strong>${alert.alert_type.replaceAll('_', ' ')}</strong><span>${alert.message}</span></div>`).join('') : '<p>No open emergency alerts.</p>'}</div>`;
+  panel.innerHTML = `<div class="worker-danger-mark is-active"><span aria-hidden="true">!</span><div><strong>Emergency attention required</strong><p>Review the alert below and contact the admin team if you cannot complete today's routine.</p></div></div><div class="worker-alert-list"><h3>Emergency alerts</h3>${alerts.map(alert => `<div class="worker-alert-row"><strong>${alert.alert_type.replaceAll('_', ' ')}</strong><span>${alert.message}</span></div>`).join('')}</div>`;
   const target = document.querySelector('#dashboardContent') || document.querySelector('#workerContent') || document.querySelector('.dashboard-main-panel');
   target?.prepend(panel);
-  const date = panel.querySelector('[name="report_date"]');
-  date.value = new Date().toISOString().slice(0, 10);
-  panel.querySelector('#dailyWorkerReport')?.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const status = panel.querySelector('.worker-report-status');
-    const data = Object.fromEntries(new FormData(event.currentTarget));
-    data.worker_email = session.email.toLowerCase(); data.scheduled_hours = 6; data.actual_hours = Number(data.actual_hours); data.tasks_completed = Number(data.tasks_completed);
-    status.textContent = 'Submitting report...';
-    status.textContent = await saveWorkerDailyReport(data) ? 'Daily report submitted.' : 'Could not submit the report.';
-  });
 })();
 
 (async function addAdminEmergencyAlerts() {

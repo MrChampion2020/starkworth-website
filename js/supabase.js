@@ -268,8 +268,24 @@ async function fetchWorkerDailyReports(email) {
   return fetchTableRows('worker_daily_reports', `worker_email=eq.${escapeQuery(email)}&order=report_date.desc`);
 }
 
+async function fetchWorkerDailyReport(email, date) {
+  const rows = await fetchTableRows(
+    'worker_daily_reports',
+    `worker_email=eq.${escapeQuery(email)}&report_date=eq.${escapeQuery(date)}&limit=1`
+  );
+  return rows[0] || null;
+}
+
+// Admin: every annotator's daily checklist report, optionally for one date.
+async function fetchWorkerDailyReportsAll(date = '') {
+  const query = date
+    ? `report_date=eq.${escapeQuery(date)}&order=submitted_at.desc`
+    : 'order=report_date.desc,submitted_at.desc&limit=200';
+  return fetchTableRows('worker_daily_reports', query);
+}
+
 async function saveWorkerDailyReport(data) {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/worker_daily_reports`, { method: 'POST', headers: { ...getAuthHeaders(), Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(data) });
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/worker_daily_reports?on_conflict=worker_email,report_date`, { method: 'POST', headers: { ...getAuthHeaders(), Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(data) });
   return response.ok;
 }
 

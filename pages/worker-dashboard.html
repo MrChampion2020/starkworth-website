@@ -31,7 +31,31 @@
     .checkin-form { display:grid; gap:12px; margin-top:12px; }
     .checkin-form select, .checkin-form textarea, .checkin-form input { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font:inherit; }
     .task-feedback-item { border:1px solid var(--border); border-radius:12px; padding:14px; margin-top:12px; }
-  </style>
+
+    /* Daily work checklist */
+    .dc-progress { display:flex; align-items:center; gap:12px; margin:14px 0 4px; }
+    .dc-track { flex:1; height:8px; background:var(--border); border-radius:4px; overflow:hidden; }
+    .dc-fill { height:100%; width:0%; background:var(--accent); border-radius:4px; transition:width .35s ease; }
+    .dc-pct { font-size:13px; font-weight:700; color:var(--primary); min-width:38px; text-align:right; }
+    .dc-section { border:1px solid var(--border); border-radius:12px; margin-top:14px; overflow:hidden; }
+    .dc-section-head { display:flex; justify-content:space-between; align-items:center; gap:10px; background:var(--accent-light); padding:9px 13px; }
+    .dc-section-head strong { font-size:13px; color:var(--primary); }
+    .dc-section-head span { font-size:11px; font-weight:700; color:var(--primary); background:rgba(255,255,255,.6); border-radius:10px; padding:2px 8px; }
+    .dc-note { font-size:11.5px; color:var(--text-muted); padding:8px 13px 0; line-height:1.5; }
+    .dc-task { display:grid; grid-template-columns:20px 1fr; gap:10px; align-items:start; padding:9px 13px; border-top:1px solid var(--border); }
+    .dc-task:first-of-type { border-top:none; }
+    .dc-task input[type=checkbox] { width:17px; height:17px; margin-top:1px; accent-color:var(--accent); cursor:pointer; }
+    .dc-task-body { display:flex; flex-direction:column; gap:5px; }
+    .dc-task-text { font-size:13px; line-height:1.4; }
+    .dc-task.done .dc-task-text { color:var(--text-muted); text-decoration:line-through; }
+    .dc-task-when { font-size:10.5px; color:var(--text-muted); font-style:italic; }
+    .dc-task-note { border:1px solid var(--border); border-radius:6px; padding:4px 8px; font:inherit; font-size:12px; width:100%; max-width:360px; }
+    .dc-report-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-top:14px; }
+    .dc-report-grid label, .dc-report-full label { font-size:12px; font-weight:600; color:var(--primary); display:block; margin-bottom:4px; }
+    .dc-report-grid input, .dc-report-full input, .dc-report-full textarea { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font:inherit; font-size:13px; }
+    .dc-report-full { margin-top:12px; }
+    .dc-save-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:16px; }
+</style>
 </head>
 <body>
 
@@ -107,6 +131,54 @@
                 </div>
               </div>
               <p id="allCheckinsDone" style="display:none;font-size:13px;color:var(--accent);margin-top:12px;">All check-ins for today are submitted. Nice work.</p>
+            </div>
+          </div>
+
+          <div class="history-panel" id="dailyChecklistCard">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;">
+              <h3>Daily work checklist</h3>
+              <a href="../starkworth_annotator_checklist.html" target="_blank" rel="noopener" style="font-size:12px;">Open printable version →</a>
+            </div>
+            <p style="font-size:13px;color:var(--text-muted);">Work through each section during your shift, fill in the daily work report, then submit. One report per day — you can reopen and update it until end of shift.</p>
+
+            <div class="checkin-form" style="margin-top:6px;">
+              <label style="font-size:13px;">Report date
+                <input type="date" id="dcDate" style="width:100%;">
+              </label>
+            </div>
+
+            <div class="dc-progress">
+              <div class="dc-track"><div class="dc-fill" id="dcFill"></div></div>
+              <span class="dc-pct" id="dcPct">0%</span>
+            </div>
+
+            <div id="dcSections"></div>
+
+            <h4 style="margin:18px 0 0;">Daily work report</h4>
+            <div class="dc-report-grid">
+              <div><label for="dcPlatform">Platform / project</label><input type="text" id="dcPlatform" placeholder="e.g. Outlier — image labeling"></div>
+              <div><label for="dcItems">Tasks / items completed</label><input type="number" id="dcItems" min="0" placeholder="e.g. 140"></div>
+              <div><label for="dcHours">Active hours</label><input type="number" id="dcHours" min="0" max="24" step="0.25" placeholder="e.g. 5.5"></div>
+              <div><label for="dcCheckins">Check-ins submitted</label><input type="text" id="dcCheckins" placeholder="auto-filled from today"></div>
+              <div><label for="dcQuality">Quality flags / rejections</label><input type="text" id="dcQuality" placeholder="None / count + reason"></div>
+              <div><label for="dcGuidelines">Guideline updates today</label><input type="text" id="dcGuidelines" placeholder="None / describe change"></div>
+            </div>
+            <div class="dc-report-full">
+              <label for="dcSummary">What did you work on today?</label>
+              <textarea id="dcSummary" rows="2" placeholder="Short summary of the work completed"></textarea>
+            </div>
+            <div class="dc-report-full">
+              <label for="dcBlockers">Blockers, tech issues &amp; notes for admin</label>
+              <textarea id="dcBlockers" rows="2" placeholder="Describe any blockers, platform outages, or login issues — or write 'None'"></textarea>
+            </div>
+            <div class="dc-report-grid">
+              <div><label for="dcSignoff">Annotator sign-off (name)</label><input type="text" id="dcSignoff" placeholder="Your full name"></div>
+              <div><label for="dcSignoffTime">Time finished</label><input type="text" id="dcSignoffTime" placeholder="e.g. 17:40"></div>
+            </div>
+
+            <div class="dc-save-row">
+              <button class="btn btn-primary" type="button" onclick="handleSaveDailyReport()" id="dcSaveBtn">Submit daily report</button>
+              <span id="dcStatus" style="font-size:13px;color:var(--text-muted);"></span>
             </div>
           </div>
 
@@ -593,6 +665,274 @@
       if (ok) document.getElementById('fb-body-' + taskId).value = '';
     }
 
+    // ===== Daily work checklist =====
+    const DC_SECTIONS = [
+      { id: "startshift", title: "Start of shift",
+        note: "Report at least 10 minutes early and press “Start shift” above to stay green.",
+        tasks: [
+          { id: "s1", text: "Check your workspace: stable internet, charged device, quiet environment", when: "Before start" },
+          { id: "s2", text: "Log in to your Annotator Dashboard and press “Start shift”", when: "10 min early" },
+          { id: "s3", text: "Confirm today's assigned client / account and the platform to work on", when: "Start" },
+          { id: "s4", text: "Log in to the assigned platform using the correct account credentials only", when: "Start" },
+          { id: "s5", text: "Check dashboard notices, task schedule, and any messages from the admin team", when: "Start" },
+          { id: "s6", text: "Confirm which task type is assigned (image, text, audio, video, or model review)", when: "Start" },
+        ] },
+      { id: "beforework", title: "Before you annotate",
+        note: "Guidelines vary by project and change often — following an outdated version is the most common cause of rejected work.",
+        tasks: [
+          { id: "b1", text: "Open the current task guidelines and read them in full before starting", when: "Per project" },
+          { id: "b2", text: "Note the date/version of the guidelines; check for updates since your last session", when: "Per project" },
+          { id: "b3", text: "Review edge-case examples and any “do / don't” reference samples", when: "Per project" },
+          { id: "b4", text: "Complete or re-take any required calibration / qualification task", when: "If required" },
+          { id: "b5", text: "Write down open questions to raise as task feedback rather than guessing", when: "Per project" },
+        ] },
+      { id: "duringwork", title: "During annotation work",
+        note: "Pay reflects task performance and input — careful, consistent output beats rushed work that needs correction.",
+        tasks: [
+          { id: "d1", text: "Work one task at a time; apply the guideline exactly, not from memory", when: "Ongoing" },
+          { id: "d2", text: "Label / classify / transcribe with attention to accuracy and required detail", when: "Ongoing" },
+          { id: "d3", text: "Self-check each item before submitting (labels, bounds, spelling, timestamps)", when: "Per item" },
+          { id: "d4", text: "Flag genuinely ambiguous items per the guideline instead of guessing", when: "As needed" },
+          { id: "d5", text: "Take short breaks to keep accuracy up; avoid long unbroken stretches", when: "Every ~90 min" },
+          { id: "d6", text: "Keep a running count of items completed for your end-of-day report", when: "Ongoing" },
+          { id: "d7", text: "Do not share your screen, account, or task content with anyone", when: "Ongoing" },
+        ] },
+      { id: "checkins", title: "90-minute check-ins",
+        note: "After starting your shift, post a check-in on your assigned client every 90 minutes (panel above).",
+        tasks: [
+          { id: "k1", text: "Confirm the next check-in slot's due time in the check-ins panel", when: "Ongoing" },
+          { id: "k2", text: "Select the assigned client, and the project / task where relevant", when: "Every 90 min" },
+          { id: "k3", text: "Write what you completed since the last check-in (be specific with counts)", when: "Every 90 min" },
+          { id: "k4", text: "Record any blockers so admin can act on them", when: "Every 90 min" },
+          { id: "k5", text: "Submit before the slot turns yellow / red; keep all slots green", when: "Every 90 min" },
+          { id: "k6", text: "Confirm “All check-ins for today are submitted” shows at end of shift", when: "End of shift" },
+        ] },
+      { id: "quality", title: "Quality & feedback",
+        tasks: [
+          { id: "q1", text: "Review any quality feedback or rejected items from previous sessions", when: "Daily" },
+          { id: "q2", text: "Re-read the relevant guideline section before reworking flagged items", when: "As needed" },
+          { id: "q3", text: "Send task feedback (progress note or suggested status change) to the admin team", when: "As needed" },
+          { id: "q4", text: "If you disagree with a quality review, raise it politely through the proper channel", when: "As needed" },
+          { id: "q5", text: "Log recurring guideline gaps or platform bugs for the admin team", when: "As needed" },
+        ] },
+      { id: "hygiene", title: "Account hygiene & security",
+        note: "Good account standing depends on accurate details, consistent activity, and secure login habits.",
+        tasks: [
+          { id: "h1", text: "Use only your assigned account; never log in from an unapproved device or network", when: "Ongoing" },
+          { id: "h2", text: "Keep your password private; never reuse it or share it over chat / email", when: "Ongoing" },
+          { id: "h3", text: "Sign out of the platform and dashboard when you finish for the day", when: "End of shift" },
+          { id: "h4", text: "Report any suspicious login prompts, emails, or account lockouts immediately", when: "As needed" },
+          { id: "h5", text: "Contact Starkworth (not the platform) to update your registered details or payment method", when: "As needed" },
+        ] },
+      { id: "endofday", title: "End of shift & weekly wrap-up",
+        note: "Payouts go out every Wednesday by 3:00 PM (CST), based on task performance and input.",
+        tasks: [
+          { id: "e1", text: "Submit any remaining in-progress items or save drafts per the platform's rules", when: "End of shift" },
+          { id: "e2", text: "Submit your final check-in and complete the daily work report below", when: "End of shift" },
+          { id: "e3", text: "Record today's completed item count and active hours", when: "End of shift" },
+          { id: "e4", text: "On the last working day of the week, declare the weekly task value (USD) per client", when: "Weekly (Fri/Sat)" },
+          { id: "e5", text: "Add notes for the admin with the declaration if anything affected the week's output", when: "Weekly" },
+          { id: "e6", text: "Check your dashboard for the approved payout split before Wednesday", when: "Weekly" },
+          { id: "e7", text: "Sign off below and hand over outstanding items to the next annotator if applicable", when: "End of shift" },
+        ] },
+    ];
+
+    let dcState = {};      // { taskId: { done, notes } }
+    let dcEmail = '';
+    let dcLoadedDate = '';
+
+    function dcAttr(value) {
+      return String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    }
+
+    function dcDraftKey(date) { return 'sw_daily_' + dcEmail + '_' + (date || document.getElementById('dcDate').value); }
+
+    function dcCollectReport() {
+      return {
+        platform_project: document.getElementById('dcPlatform').value.trim(),
+        items: document.getElementById('dcItems').value,
+        hours: document.getElementById('dcHours').value,
+        checkins_summary: document.getElementById('dcCheckins').value.trim(),
+        quality_flags: document.getElementById('dcQuality').value.trim(),
+        guideline_updates: document.getElementById('dcGuidelines').value.trim(),
+        summary: document.getElementById('dcSummary').value.trim(),
+        blockers: document.getElementById('dcBlockers').value.trim(),
+        signoff: document.getElementById('dcSignoff').value.trim(),
+        signoff_time: document.getElementById('dcSignoffTime').value.trim(),
+      };
+    }
+
+    function dcSaveDraft() {
+      try {
+        localStorage.setItem(dcDraftKey(), JSON.stringify({ checklist: dcState, report: dcCollectReport() }));
+      } catch (_) {}
+    }
+
+    function dcSectionProgress() {
+      const out = {};
+      DC_SECTIONS.forEach(sec => {
+        const done = sec.tasks.filter(t => dcState[t.id] && dcState[t.id].done).length;
+        out[sec.id] = { done, total: sec.tasks.length };
+      });
+      return out;
+    }
+
+    function dcUpdateProgress() {
+      let total = 0, done = 0;
+      const sp = dcSectionProgress();
+      DC_SECTIONS.forEach(sec => {
+        total += sec.tasks.length;
+        done += sp[sec.id].done;
+        const cnt = document.getElementById('dc-count-' + sec.id);
+        if (cnt) cnt.textContent = sp[sec.id].done + ' / ' + sec.tasks.length;
+      });
+      const pct = total ? Math.round((done / total) * 100) : 0;
+      document.getElementById('dcFill').style.width = pct + '%';
+      document.getElementById('dcPct').textContent = pct + '%';
+      return pct;
+    }
+
+    function dcToggle(id, checked) {
+      if (!dcState[id]) dcState[id] = { done: false, notes: '' };
+      dcState[id].done = checked;
+      const row = document.getElementById('dc-task-' + id);
+      if (row) row.classList.toggle('done', checked);
+      dcUpdateProgress();
+      dcSaveDraft();
+    }
+
+    function dcNote(id, val) {
+      if (!dcState[id]) dcState[id] = { done: false, notes: '' };
+      dcState[id].notes = val;
+      dcSaveDraft();
+    }
+
+    function dcBuildSections() {
+      const wrap = document.getElementById('dcSections');
+      wrap.innerHTML = DC_SECTIONS.map(sec => `
+        <div class="dc-section">
+          <div class="dc-section-head">
+            <strong>${sec.title}</strong>
+            <span id="dc-count-${sec.id}">0 / ${sec.tasks.length}</span>
+          </div>
+          ${sec.note ? `<div class="dc-note">${sec.note}</div>` : ''}
+          ${sec.tasks.map(t => {
+            const st = dcState[t.id] || {};
+            return `
+            <div class="dc-task${st.done ? ' done' : ''}" id="dc-task-${t.id}">
+              <input type="checkbox" ${st.done ? 'checked' : ''}
+                onchange="dcToggle('${t.id}', this.checked)" aria-label="${escapeHtml(t.text)}">
+              <div class="dc-task-body">
+                <span class="dc-task-text">${t.text}</span>
+                <span class="dc-task-when">${t.when}</span>
+                <input class="dc-task-note" type="text" placeholder="Notes / initials…"
+                  value="${dcAttr(st.notes || '')}"
+                  oninput="dcNote('${t.id}', this.value)">
+              </div>
+            </div>`;
+          }).join('')}
+        </div>`).join('');
+      dcUpdateProgress();
+    }
+
+    function dcApplyReport(r) {
+      document.getElementById('dcPlatform').value = r.platform_project || '';
+      document.getElementById('dcItems').value = (r.items ?? r.tasks_completed ?? '') === null ? '' : (r.items ?? r.tasks_completed ?? '');
+      document.getElementById('dcHours').value = (r.hours ?? r.actual_hours ?? '') === null ? '' : (r.hours ?? r.actual_hours ?? '');
+      document.getElementById('dcCheckins').value = r.checkins_summary || '';
+      document.getElementById('dcQuality').value = r.quality_flags || '';
+      document.getElementById('dcGuidelines').value = r.guideline_updates || '';
+      document.getElementById('dcSummary').value = r.summary || r.task_summary || '';
+      document.getElementById('dcBlockers').value = r.blockers || '';
+      document.getElementById('dcSignoff').value = r.signoff || r.annotator_signoff || '';
+      document.getElementById('dcSignoffTime').value = r.signoff_time || '';
+    }
+
+    function dcAutoCheckins() {
+      const el = document.getElementById('dcCheckins');
+      if (el.value.trim() || !Array.isArray(cinSlots) || !cinSlots.length) return;
+      el.value = cinSlots.filter(s => s.submitted_at).length + ' of ' + cinSlots.length;
+    }
+
+    async function dcLoadForDate(date) {
+      dcLoadedDate = date;
+      dcState = {};
+      let applied = false;
+      const remote = await fetchWorkerDailyReport(dcEmail, date).catch(() => null);
+      if (remote) {
+        if (remote.checklist && typeof remote.checklist === 'object') dcState = remote.checklist;
+        dcApplyReport(remote);
+        applied = true;
+        document.getElementById('dcStatus').textContent = 'Loaded your submitted report for this date. Update and resubmit any time before end of shift.';
+      }
+      if (!applied) {
+        try {
+          const draft = JSON.parse(localStorage.getItem(dcDraftKey(date)) || 'null');
+          if (draft) {
+            if (draft.checklist) dcState = draft.checklist;
+            if (draft.report) dcApplyReport(draft.report);
+            document.getElementById('dcStatus').textContent = 'Restored your unsaved draft for this date.';
+          } else {
+            document.getElementById('dcStatus').textContent = '';
+          }
+        } catch (_) {}
+      }
+      dcBuildSections();
+      dcAutoCheckins();
+    }
+
+    async function handleSaveDailyReport() {
+      const btn = document.getElementById('dcSaveBtn');
+      const status = document.getElementById('dcStatus');
+      const date = document.getElementById('dcDate').value;
+      if (!date) { status.textContent = 'Pick a report date.'; return; }
+      const r = dcCollectReport();
+      const pct = dcUpdateProgress();
+      btn.disabled = true; btn.textContent = 'Submitting…';
+      const ok = await saveWorkerDailyReport({
+        worker_email: dcEmail,
+        report_date: date,
+        scheduled_hours: null,
+        actual_hours: Number(r.hours) || 0,
+        tasks_completed: Math.max(0, parseInt(r.items, 10) || 0),
+        task_summary: r.summary || null,
+        blockers: r.blockers || null,
+        platform_project: r.platform_project || null,
+        checkins_summary: r.checkins_summary || null,
+        quality_flags: r.quality_flags || null,
+        guideline_updates: r.guideline_updates || null,
+        checklist: dcState,
+        checklist_pct: pct,
+        section_progress: dcSectionProgress(),
+        annotator_signoff: r.signoff || null,
+        signoff_time: r.signoff_time || null,
+        status: 'submitted'
+      });
+      btn.disabled = false; btn.textContent = 'Submit daily report';
+      if (ok) {
+        status.textContent = 'Daily report submitted (' + pct + '% checklist). You can update it until end of shift.';
+        try { localStorage.removeItem(dcDraftKey(date)); } catch (_) {}
+      } else {
+        status.textContent = 'Could not submit the report. Your draft is saved locally — try again.';
+      }
+    }
+
+    async function initDailyChecklist(email) {
+      dcEmail = (email || '').toLowerCase();
+      const dateInput = document.getElementById('dcDate');
+      dateInput.value = new Date().toISOString().slice(0, 10);
+      ['dcPlatform','dcItems','dcHours','dcCheckins','dcQuality','dcGuidelines','dcSummary','dcBlockers','dcSignoff','dcSignoffTime']
+        .forEach(id => document.getElementById(id).addEventListener('input', dcSaveDraft));
+      dateInput.addEventListener('change', () => dcLoadForDate(dateInput.value));
+      if (!document.getElementById('dcSignoff').value) {
+        const w = await fetchWorkerByEmail(dcEmail).catch(() => null);
+        if (w && (w.first_name || w.last_name)) {
+          document.getElementById('dcSignoff').value = [w.first_name, w.last_name].filter(Boolean).join(' ');
+        }
+      }
+      await dcLoadForDate(dateInput.value);
+    }
+
     (async function init() {
       await ensureFreshSession();
       const session = getSession();
@@ -690,6 +1030,7 @@
       await initCheckins(session.email);
       await initTaskValues(session.email);
       await initTaskFeedback(session.email);
+      await initDailyChecklist(session.email);
     })();
   </script>
   <a href="support.html" class="support-fab" aria-label="Get support">

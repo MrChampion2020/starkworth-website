@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Starkworth &mdash; Annotator Daily Checklist</title>
+<style>
+  :root {
+    --green: #064e3b;
+    --green-dark: #022c22;
+    --green-light: #ecfdf5;
+    --green-mid: #10b981;
+    --gold: #C9A84C;
+    --gold-light: #FDF8EC;
+    --gold-mid: #E8C76A;
+    --text: #0f2b22;
+    --text-muted: #5b6b64;
+    --text-faint: #94a39c;
+    --border: #d3ede0;
+    --bg: #f4faf6;
+    --white: #FFFFFF;
+    --danger: #C0392B;
+    --danger-light: #FDF2F1;
+    --row-alt: #FAFCFB;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--green);
+    color: white;
+    padding: 20px 32px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .header-brand { display: flex; flex-direction: column; gap: 2px; }
+  .header-brand .company { font-size: 22px; font-weight: 700; letter-spacing: 0.5px; }
+  .header-brand .company span { color: var(--green-mid); }
+  .header-brand .tagline { font-size: 12px; color: var(--gold-mid); letter-spacing: 0.3px; }
+  .header-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .header-meta .doc-title { font-size: 15px; font-weight: 600; color: var(--gold-mid); }
+  .header-meta .live-date { font-size: 12px; color: rgba(255,255,255,0.7); }
+
+  /* GOLD STRIPE */
+  .gold-stripe { height: 4px; background: var(--gold); }
+
+  /* META BAR */
+  .meta-bar {
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 32px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .meta-field { display: flex; align-items: center; gap: 8px; }
+  .meta-field label { font-size: 12px; font-weight: 600; color: var(--green); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+  .meta-field input {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--white);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .meta-field input:focus { border-color: var(--green); }
+  .meta-field input[name="date"] { width: 150px; }
+  .meta-field input[name="day"] { width: 120px; }
+  .meta-field input[name="annotator"] { width: 180px; }
+  .meta-field input[name="client"] { width: 190px; }
+
+  /* PROGRESS BAR */
+  .progress-wrap {
+    background: var(--white);
+    padding: 10px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .progress-label { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+  .progress-track {
+    flex: 1;
+    height: 8px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--green);
+    border-radius: 4px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+  .progress-pct { font-size: 13px; font-weight: 600; color: var(--green); min-width: 36px; text-align: right; }
+
+  /* MAIN LAYOUT */
+  .main { padding: 20px 32px; max-width: 960px; margin: 0 auto; }
+
+  /* SECTION */
+  .section { margin-bottom: 20px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); background: var(--white); }
+  .section-header {
+    background: var(--green);
+    color: white;
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    letter-spacing: 0.2px;
+  }
+  .section-header .sec-title { display: flex; align-items: center; gap: 8px; }
+  .section-header .sec-count {
+    font-size: 11px;
+    background: rgba(255,255,255,0.18);
+    border-radius: 12px;
+    padding: 2px 9px;
+    color: rgba(255,255,255,0.85);
+  }
+  .section-note {
+    background: var(--green-light);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* TASK ROW */
+  .task-row {
+    display: grid;
+    grid-template-columns: 40px 1fr 110px 180px;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+    min-height: 42px;
+  }
+  .task-row:last-child { border-bottom: none; }
+  .task-row:nth-child(even) { background: var(--row-alt); }
+  .task-row.done { background: var(--green-light); }
+  .task-row.done .task-text { color: var(--green-mid); text-decoration: line-through; opacity: 0.7; }
+
+  /* CHECKBOX */
+  .cb-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 0;
+    cursor: pointer;
+  }
+  .custom-cb {
+    width: 20px; height: 20px;
+    border: 2px solid #BBBBBB;
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    background: white;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .custom-cb:hover { border-color: var(--green); }
+  .custom-cb.checked {
+    background: var(--green);
+    border-color: var(--green);
+  }
+  .custom-cb.checked::after {
+    content: '';
+    width: 5px; height: 9px;
+    border: 2px solid white;
+    border-top: none; border-left: none;
+    transform: rotate(45deg) translateY(-1px);
+    display: block;
+  }
+
+  /* TASK TEXT */
+  .task-text {
+    padding: 8px 10px 8px 4px;
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--text);
+    transition: color 0.2s;
+  }
+
+  /* TIME */
+  .time-cell {
+    padding: 8px 8px;
+    font-size: 11px;
+    color: var(--text-faint);
+    font-style: italic;
+    text-align: center;
+  }
+
+  /* NOTES INPUT */
+  .notes-cell { padding: 6px 10px 6px 4px; }
+  .notes-cell input {
+    width: 100%;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    padding: 4px 8px;
+    font-size: 12px;
+    color: var(--text);
+    background: transparent;
+    outline: none;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .notes-cell input::placeholder { color: #CCCCCC; }
+  .notes-cell input:focus {
+    border-color: var(--green);
+    background: var(--white);
+  }
+  .notes-cell input:hover { background: rgba(6,78,59,0.04); }
+
+  /* COLUMN HEADER */
+  .col-header {
+    display: grid;
+    grid-template-columns: 40px 1fr 110px 180px;
+    background: var(--green-light);
+    border-bottom: 1px solid var(--border);
+    padding: 6px 0;
+  }
+  .col-h { font-size: 11px; font-weight: 700; color: var(--green); text-transform: uppercase; letter-spacing: 0.5px; padding: 0 10px; }
+  .col-h.center { text-align: center; }
+
+  /* REPORTING SECTION */
+  .reporting-section { margin-bottom: 20px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); background: var(--white); }
+  .reporting-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .report-field {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .report-field:nth-child(even) { border-right: none; }
+  .report-field:nth-last-child(-n+2) { border-bottom: none; }
+  .report-field label { font-size: 11px; font-weight: 700; color: var(--green); text-transform: uppercase; letter-spacing: 0.5px; }
+  .report-field input, .report-field textarea {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--white);
+    outline: none;
+    font-family: inherit;
+    width: 100%;
+    transition: border-color 0.15s;
+    resize: none;
+  }
+  .report-field input:focus, .report-field textarea:focus { border-color: var(--green); }
+
+  /* SIGN OFF */
+  .signoff { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); background: var(--white); margin-bottom: 20px; }
+  .signoff-panel { padding: 14px 20px; }
+  .signoff-panel:first-child { border-right: 1px solid var(--border); }
+  .signoff-panel label { font-size: 11px; font-weight: 700; color: var(--green); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px; }
+  .signoff-panel input {
+    width: 100%;
+    border: none;
+    border-bottom: 1.5px solid var(--border);
+    border-radius: 0;
+    padding: 4px 0;
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+    background: transparent;
+    transition: border-color 0.15s;
+    margin-bottom: 8px;
+  }
+  .signoff-panel input:focus { border-bottom-color: var(--green); }
+
+  /* ACTION BAR */
+  .action-bar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 0 30px;
+    flex-wrap: wrap;
+  }
+  .action-left { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn {
+    border: none;
+    border-radius: 7px;
+    padding: 9px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--green); color: white; }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-outline { background: white; color: var(--green); border: 1.5px solid var(--green); }
+  .btn-outline:hover { background: var(--green-light); }
+  .btn-gold { background: var(--gold); color: #3A2800; }
+  .btn-gold:hover { opacity: 0.88; }
+  .btn-danger { background: white; color: var(--danger); border: 1.5px solid #FFCCCC; }
+  .btn-danger:hover { background: var(--danger-light); }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    background: var(--green);
+    color: white;
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 20px rgba(6,78,59,0.35);
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.3s, transform 0.3s;
+    z-index: 999;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.gold { background: var(--gold); color: #3A2800; }
+
+  /* SUMMARY STATS */
+  .summary-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+  .stat-value { font-size: 22px; font-weight: 700; color: var(--green); }
+  .stat-sub { font-size: 11px; color: var(--text-faint); }
+
+  /* PRINT */
+  @media print {
+    body { background: white; font-size: 11px; }
+    .action-bar, .toast { display: none; }
+    .header { padding: 12px 20px; }
+    .main { padding: 12px; }
+    .notes-cell input { border: 1px solid #DDD; background: white; }
+    .custom-cb.checked { background: #064e3b !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .section-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .task-row.done { background: #ecfdf5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+
+  @media (max-width: 700px) {
+    .main { padding: 12px 14px; }
+    .header { padding: 14px 16px; }
+    .meta-bar { padding: 10px 16px; gap: 12px; }
+    .progress-wrap { padding: 8px 16px; }
+    .task-row { grid-template-columns: 36px 1fr 80px; }
+    .notes-cell { display: none; }
+    .col-header { grid-template-columns: 36px 1fr 80px; }
+    .col-h:last-child { display: none; }
+    .summary-row { grid-template-columns: 1fr 1fr; }
+    .reporting-grid { grid-template-columns: 1fr; }
+    .report-field { border-right: none; }
+    .signoff { grid-template-columns: 1fr; }
+    .signoff-panel:first-child { border-right: none; border-bottom: 1px solid var(--border); }
+    .header-meta { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-brand">
+    <div class="company">STARK<span>WORTH</span></div>
+    <div class="tagline">Built on trust, we stack up your worth &middot; AI Data Annotation</div>
+  </div>
+  <div class="header-meta">
+    <div class="doc-title">Annotator Daily Work Checklist</div>
+    <div class="live-date" id="live-date"></div>
+  </div>
+</div>
+<div class="gold-stripe"></div>
+
+<div class="meta-bar">
+  <div class="meta-field">
+    <label>Date</label>
+    <input type="date" name="date" id="f-date">
+  </div>
+  <div class="meta-field">
+    <label>Day</label>
+    <input type="text" name="day" id="f-day" placeholder="e.g. Monday">
+  </div>
+  <div class="meta-field">
+    <label>Annotator</label>
+    <input type="text" name="annotator" id="f-annotator" placeholder="Your name">
+  </div>
+  <div class="meta-field">
+    <label>Client / Account</label>
+    <input type="text" name="client" id="f-client" placeholder="Assigned account owner">
+  </div>
+</div>
+
+<div class="progress-wrap">
+  <span class="progress-label">Today's progress</span>
+  <div class="progress-track">
+    <div class="progress-fill" id="progress-fill"></div>
+  </div>
+  <span class="progress-pct" id="progress-pct">0%</span>
+</div>
+
+<div class="main">
+
+  <!-- STATS -->
+  <div class="summary-row">
+    <div class="stat-card">
+      <div class="stat-label">Tasks done</div>
+      <div class="stat-value" id="stat-done">0</div>
+      <div class="stat-sub" id="stat-total">of 0 total</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Sections complete</div>
+      <div class="stat-value" id="stat-sections">0</div>
+      <div class="stat-sub" id="stat-sections-sub">of 0 sections</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Completion</div>
+      <div class="stat-value" id="stat-pct">0%</div>
+      <div class="stat-sub">overall progress</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Status</div>
+      <div class="stat-value" id="stat-status" style="font-size:14px; padding-top:4px;">Not started</div>
+      <div class="stat-sub" id="stat-time"></div>
+    </div>
+  </div>
+
+  <div id="checklist-area"></div>
+
+  <!-- DAILY REPORTING -->
+  <div class="reporting-section">
+    <div class="section-header">
+      <div class="sec-title">Daily work report</div>
+    </div>
+    <div class="reporting-grid">
+      <div class="report-field">
+        <label>Platform / project worked on</label>
+        <input type="text" id="r-platform" placeholder="e.g. Outlier &mdash; image labeling">
+      </div>
+      <div class="report-field">
+        <label>Tasks / items completed</label>
+        <input type="number" id="r-items" placeholder="e.g. 140" min="0">
+      </div>
+      <div class="report-field">
+        <label>Approx. active hours</label>
+        <input type="text" id="r-hours" placeholder="e.g. 5.5">
+      </div>
+      <div class="report-field">
+        <label>Check-ins submitted</label>
+        <input type="text" id="r-checkins" placeholder="e.g. 4 of 4">
+      </div>
+      <div class="report-field">
+        <label>Quality flags / rejections</label>
+        <input type="text" id="r-quality" placeholder="None / count + reason">
+      </div>
+      <div class="report-field">
+        <label>Guideline updates today</label>
+        <input type="text" id="r-guidelines" placeholder="None / describe change">
+      </div>
+      <div class="report-field" style="grid-column: span 2; border-right: none;">
+        <label>Blockers, tech issues &amp; notes for admin</label>
+        <textarea id="r-blockers" rows="2" placeholder="Describe any blockers, platform outages, or login issues &mdash; or write 'None'"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIGN OFF -->
+  <div class="signoff">
+    <div class="signoff-panel">
+      <label>Annotator sign-off</label>
+      <input type="text" id="s-annotator" placeholder="Full name">
+      <input type="text" id="s-atime" placeholder="Time finished (e.g. 17:40)">
+    </div>
+    <div class="signoff-panel">
+      <label>Team lead / admin review</label>
+      <input type="text" id="s-lead" placeholder="Full name">
+      <input type="text" id="s-ltime" placeholder="Time reviewed">
+    </div>
+  </div>
+
+  <div class="action-bar">
+    <div class="action-left">
+      <button class="btn btn-primary" onclick="saveData()">Save checklist</button>
+      <button class="btn btn-gold" onclick="window.print()">Print / PDF</button>
+      <button class="btn btn-outline" onclick="exportSummary()">Copy summary</button>
+    </div>
+    <button class="btn btn-danger" onclick="clearAll()">Reset day</button>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SECTIONS = [
+  {
+    id: "startshift",
+    title: "Start of shift",
+    note: "Report at least 10 minutes early and press “Start shift” on your Annotator Dashboard to stay green.",
+    tasks: [
+      { id: "s1", text: "Check your workspace: stable internet, charged device, quiet environment", time: "Before start" },
+      { id: "s2", text: "Log in to your Starkworth Annotator Dashboard and press “Start shift”", time: "10 min early" },
+      { id: "s3", text: "Confirm today's assigned client / account and the platform to work on", time: "Start" },
+      { id: "s4", text: "Log in to the assigned platform using the correct account credentials only", time: "Start" },
+      { id: "s5", text: "Check dashboard notices, task schedule, and any messages from the admin team", time: "Start" },
+      { id: "s6", text: "Confirm which task type is assigned (image, text, audio, video, or model review)", time: "Start" },
+    ]
+  },
+  {
+    id: "beforework",
+    title: "Before you annotate",
+    note: "Guidelines vary by project and change often — following an outdated version is the most common cause of rejected work.",
+    tasks: [
+      { id: "b1", text: "Open the current task guidelines and read them in full before starting", time: "Per project" },
+      { id: "b2", text: "Note the date/version of the guidelines; check for updates since your last session", time: "Per project" },
+      { id: "b3", text: "Review edge-case examples and any “do / don't” reference images or samples", time: "Per project" },
+      { id: "b4", text: "Complete or re-take any required calibration / qualification task", time: "If required" },
+      { id: "b5", text: "Write down open questions to raise as task feedback rather than guessing", time: "Per project" },
+    ]
+  },
+  {
+    id: "duringwork",
+    title: "During annotation work",
+    note: "Pay reflects task performance and input — careful, consistent output beats rushed work that needs correction.",
+    tasks: [
+      { id: "d1", text: "Work one task at a time; apply the guideline exactly, not from memory", time: "Ongoing" },
+      { id: "d2", text: "Label / classify / transcribe with attention to accuracy and required detail", time: "Ongoing" },
+      { id: "d3", text: "Self-check each item before submitting (labels, bounds, spelling, timestamps)", time: "Per item" },
+      { id: "d4", text: "Flag genuinely ambiguous items per the guideline instead of guessing", time: "As needed" },
+      { id: "d5", text: "Take short breaks to keep accuracy up; avoid long unbroken stretches", time: "Every ~90 min" },
+      { id: "d6", text: "Keep a running count of items completed for your end-of-day report", time: "Ongoing" },
+      { id: "d7", text: "Do not share your screen, account, or task content with anyone", time: "Ongoing" },
+    ]
+  },
+  {
+    id: "checkins",
+    title: "90-minute check-ins",
+    note: "After starting your shift, post a dashboard update on your assigned client every 90 minutes.",
+    tasks: [
+      { id: "k1", text: "Open the “Today's check-ins” panel and confirm the next slot's due time", time: "Ongoing" },
+      { id: "k2", text: "Select the assigned client, and the project / task where relevant", time: "Every 90 min" },
+      { id: "k3", text: "Write what you completed since the last check-in (be specific with counts)", time: "Every 90 min" },
+      { id: "k4", text: "Record any blockers in the blockers field so admin can act on them", time: "Every 90 min" },
+      { id: "k5", text: "Submit before the slot turns yellow / red; keep all slots green", time: "Every 90 min" },
+      { id: "k6", text: "Confirm “All check-ins for today are submitted” shows at end of shift", time: "End of shift" },
+    ]
+  },
+  {
+    id: "quality",
+    title: "Quality & feedback",
+    tasks: [
+      { id: "q1", text: "Review any quality feedback or rejected items from previous sessions", time: "Daily" },
+      { id: "q2", text: "Re-read the relevant guideline section before reworking flagged items", time: "As needed" },
+      { id: "q3", text: "Send task feedback (progress note or suggested status change) to the admin team", time: "As needed" },
+      { id: "q4", text: "If you disagree with a quality review, raise it politely through the proper channel", time: "As needed" },
+      { id: "q5", text: "Log recurring guideline gaps or platform bugs for the admin team", time: "As needed" },
+    ]
+  },
+  {
+    id: "hygiene",
+    title: "Account hygiene & security",
+    note: "Good account standing depends on accurate details, consistent activity, and secure login habits.",
+    tasks: [
+      { id: "h1", text: "Use only your assigned account; never log in from an unapproved device or network", time: "Ongoing" },
+      { id: "h2", text: "Keep your password private; never reuse it or share it over chat / email", time: "Ongoing" },
+      { id: "h3", text: "Sign out of the platform and dashboard when you finish for the day", time: "End of shift" },
+      { id: "h4", text: "Report any suspicious login prompts, emails, or account lockouts immediately", time: "As needed" },
+      { id: "h5", text: "Contact Starkworth (not the platform) to update your registered details or payment method", time: "As needed" },
+    ]
+  },
+  {
+    id: "endofday",
+    title: "End of shift & weekly wrap-up",
+    note: "Payouts go out every Wednesday by 3:00 PM (CST), based on task performance and input.",
+    tasks: [
+      { id: "e1", text: "Submit any remaining in-progress items or save drafts per the platform's rules", time: "End of shift" },
+      { id: "e2", text: "Submit your final check-in and complete the daily work report below", time: "End of shift" },
+      { id: "e3", text: "Record today's completed item count and active hours for the week", time: "End of shift" },
+      { id: "e4", text: "On the last working day of the week, declare the weekly task value (USD) per client", time: "Weekly (Fri/Sat)" },
+      { id: "e5", text: "Add notes for the admin with the declaration if anything affected the week's output", time: "Weekly" },
+      { id: "e6", text: "Check your dashboard for the approved payout split before Wednesday", time: "Weekly" },
+      { id: "e7", text: "Sign off below and, if applicable, hand over outstanding items to the next annotator", time: "End of shift" },
+    ]
+  }
+];
+
+let state = {};
+
+function getStorageKey() {
+  const d = document.getElementById('f-date').value || new Date().toISOString().split('T')[0];
+  return 'starkworth_annotator_checklist_' + d;
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(getStorageKey());
+    state = raw ? JSON.parse(raw) : {};
+  } catch(e) { state = {}; }
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(getStorageKey(), JSON.stringify(state));
+  } catch(e) {}
+}
+
+function buildChecklist() {
+  const area = document.getElementById('checklist-area');
+  area.innerHTML = '';
+  SECTIONS.forEach(sec => {
+    const el = document.createElement('div');
+    el.className = 'section';
+    el.innerHTML = `
+      <div class="section-header">
+        <div class="sec-title">${sec.title}</div>
+        <span class="sec-count" id="sec-count-${sec.id}">0 / ${sec.tasks.length}</span>
+      </div>
+      ${sec.note ? `<div class="section-note">${sec.note}</div>` : ''}
+      <div class="col-header">
+        <div class="col-h center"></div>
+        <div class="col-h">Task</div>
+        <div class="col-h center">When</div>
+        <div class="col-h">Notes / initials</div>
+      </div>
+    `;
+    sec.tasks.forEach(task => {
+      const row = document.createElement('div');
+      row.className = 'task-row' + (state[task.id] && state[task.id].done ? ' done' : '');
+      row.setAttribute('data-id', task.id);
+      const notesVal = (state[task.id] && state[task.id].notes) ? state[task.id].notes : '';
+      const checked = state[task.id] && state[task.id].done;
+      row.innerHTML = `
+        <div class="cb-cell" onclick="toggleTask('${task.id}')">
+          <div class="custom-cb ${checked ? 'checked' : ''}" id="cb-${task.id}"></div>
+        </div>
+        <div class="task-text" id="tt-${task.id}">${task.text}</div>
+        <div class="time-cell">${task.time}</div>
+        <div class="notes-cell">
+          <input type="text" placeholder="Notes…" value="${notesVal.replace(/"/g, '&quot;')}"
+            onchange="updateNotes('${task.id}', this.value)"
+            oninput="updateNotes('${task.id}', this.value)">
+        </div>
+      `;
+      el.appendChild(row);
+    });
+    area.appendChild(el);
+  });
+  updateStats();
+}
+
+function toggleTask(id) {
+  if (!state[id]) state[id] = { done: false, notes: '' };
+  state[id].done = !state[id].done;
+  const row = document.querySelector(`.task-row[data-id="${id}"]`);
+  const cb = document.getElementById('cb-' + id);
+  if (state[id].done) {
+    row.classList.add('done');
+    cb.classList.add('checked');
+  } else {
+    row.classList.remove('done');
+    cb.classList.remove('checked');
+  }
+  saveState();
+  updateStats();
+}
+
+function updateNotes(id, val) {
+  if (!state[id]) state[id] = { done: false, notes: '' };
+  state[id].notes = val;
+  saveState();
+}
+
+function updateStats() {
+  let total = 0, done = 0, secsDone = 0;
+  SECTIONS.forEach(sec => {
+    let secDone = 0;
+    sec.tasks.forEach(t => {
+      total++;
+      if (state[t.id] && state[t.id].done) { done++; secDone++; }
+    });
+    const cnt = document.getElementById('sec-count-' + sec.id);
+    if (cnt) cnt.textContent = secDone + ' / ' + sec.tasks.length;
+    if (secDone === sec.tasks.length) secsDone++;
+  });
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-pct').textContent = pct + '%';
+  document.getElementById('stat-done').textContent = done;
+  document.getElementById('stat-total').textContent = 'of ' + total + ' total';
+  document.getElementById('stat-sections').textContent = secsDone;
+  document.getElementById('stat-sections-sub').textContent = 'of ' + SECTIONS.length + ' sections';
+  document.getElementById('stat-pct').textContent = pct + '%';
+  const statusEl = document.getElementById('stat-status');
+  const timeEl = document.getElementById('stat-time');
+  if (pct === 0) { statusEl.textContent = 'Not started'; statusEl.style.color = '#94a39c'; }
+  else if (pct === 100) { statusEl.textContent = '✓ Complete'; statusEl.style.color = '#064e3b'; }
+  else if (pct < 40) { statusEl.textContent = 'In progress'; statusEl.style.color = '#C9A84C'; }
+  else if (pct < 80) { statusEl.textContent = 'Going well'; statusEl.style.color = '#10b981'; }
+  else { statusEl.textContent = 'Almost done!'; statusEl.style.color = '#10b981'; }
+  const now = new Date();
+  timeEl.textContent = 'Last updated ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function saveData() {
+  saveState();
+  showToast('✓ Checklist saved!');
+}
+
+function clearAll() {
+  if (!confirm('Reset the entire checklist for today? This cannot be undone.')) return;
+  state = {};
+  saveState();
+  ['r-platform','r-items','r-hours','r-checkins','r-quality','r-guidelines','r-blockers',
+   's-annotator','s-atime','s-lead','s-ltime'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  buildChecklist();
+  showToast('Checklist reset.', true);
+}
+
+function exportSummary() {
+  const date = document.getElementById('f-date').value || '(date not set)';
+  const annotator = document.getElementById('f-annotator').value || '(not set)';
+  const client = document.getElementById('f-client').value || '(not set)';
+  let total = 0, done = 0;
+  SECTIONS.forEach(sec => sec.tasks.forEach(t => { total++; if (state[t.id] && state[t.id].done) done++; }));
+  const pct = total ? Math.round((done/total)*100) : 0;
+  let txt = `STARKWORTH — Annotator Daily Work Summary\n`;
+  txt += `Date: ${date} | Annotator: ${annotator} | Client: ${client}\n`;
+  txt += `Progress: ${done}/${total} tasks (${pct}%)\n\n`;
+  SECTIONS.forEach(sec => {
+    const secDone = sec.tasks.filter(t => state[t.id] && state[t.id].done).length;
+    txt += `${sec.title}: ${secDone}/${sec.tasks.length}\n`;
+    sec.tasks.forEach(t => {
+      const mark = state[t.id] && state[t.id].done ? '[x]' : '[ ]';
+      const notes = state[t.id] && state[t.id].notes ? ` — ${state[t.id].notes}` : '';
+      txt += `  ${mark} ${t.text}${notes}\n`;
+    });
+    txt += '\n';
+  });
+  txt += `Platform/project: ${document.getElementById('r-platform').value || '-'}\n`;
+  txt += `Items completed: ${document.getElementById('r-items').value || '-'}\n`;
+  txt += `Active hours: ${document.getElementById('r-hours').value || '-'}\n`;
+  txt += `Check-ins submitted: ${document.getElementById('r-checkins').value || '-'}\n`;
+  txt += `Quality flags: ${document.getElementById('r-quality').value || '-'}\n`;
+  txt += `Guideline updates: ${document.getElementById('r-guidelines').value || '-'}\n`;
+  txt += `Blockers / notes: ${document.getElementById('r-blockers').value || '-'}\n`;
+  navigator.clipboard.writeText(txt).then(() => showToast('Summary copied!'));
+}
+
+function showToast(msg, gold = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (gold ? ' gold' : '');
+  setTimeout(() => { t.className = 'toast'; }, 3000);
+}
+
+function setLiveDate() {
+  const now = new Date();
+  document.getElementById('live-date').textContent = now.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const dateInput = document.getElementById('f-date');
+  if (!dateInput.value) {
+    dateInput.value = now.toISOString().split('T')[0];
+    document.getElementById('f-day').value = now.toLocaleDateString([], { weekday: 'long' });
+  }
+}
+
+document.getElementById('f-date').addEventListener('change', function() {
+  const d = new Date(this.value + 'T12:00:00');
+  document.getElementById('f-day').value = d.toLocaleDateString([], { weekday: 'long' });
+  loadState();
+  buildChecklist();
+});
+
+setLiveDate();
+loadState();
+buildChecklist();
+</script>
+</body>
+</html>

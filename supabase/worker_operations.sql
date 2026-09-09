@@ -28,6 +28,40 @@ create table if not exists public.worker_emergency_alerts (
 create index if not exists worker_daily_reports_email_idx on public.worker_daily_reports(worker_email, report_date desc);
 create index if not exists worker_emergency_alerts_email_idx on public.worker_emergency_alerts(worker_email, created_at desc);
 
+-- ----------------------------------------------------------------------------
+-- Annotator Daily Work Checklist template (see starkworth_annotator_checklist.html
+-- and the "Daily work checklist" panel on the Annotator Dashboard).
+--
+-- Each annotator works a 7-section checklist every shift and files one report a
+-- day. These columns carry the report fields and the saved checklist state so
+-- the admin Reports tab can show exactly what each worker submitted.
+-- ----------------------------------------------------------------------------
+alter table public.worker_daily_reports
+  add column if not exists platform_project text,
+  add column if not exists checkins_summary text,
+  add column if not exists quality_flags text,
+  add column if not exists guideline_updates text,
+  add column if not exists checklist jsonb not null default '{}'::jsonb,
+  add column if not exists checklist_pct integer not null default 0,
+  add column if not exists section_progress jsonb not null default '{}'::jsonb,
+  add column if not exists annotator_signoff text,
+  add column if not exists signoff_time text;
+
+alter table public.worker_daily_reports drop constraint if exists worker_daily_reports_checklist_pct_check;
+alter table public.worker_daily_reports add constraint worker_daily_reports_checklist_pct_check
+  check (checklist_pct between 0 and 100);
+
+-- The rigid six-hour routine is retired. Shifts are configurable per annotator
+-- (worker_shift_settings) and pay is task-based, so the report tracks the hours
+-- actually worked and alerts fire on a missing report, not on "fewer than six".
+alter table public.worker_daily_reports alter column scheduled_hours drop not null;
+alter table public.worker_daily_reports alter column scheduled_hours drop default;
+alter table public.worker_daily_reports drop constraint if exists worker_daily_reports_scheduled_hours_check;
+alter table public.worker_daily_reports alter column task_summary drop not null;
+
+-- Called on every Annotator Dashboard load. Resolves a stale "missing report"
+-- alert once today's report is in, and raises one only when the annotator ran a
+-- shift today that has been over for 10+ hours with still no report filed.
 create or replace function public.check_worker_daily_routine()
 returns public.worker_emergency_alerts language plpgsql security definer set search_path = public
 as $$
@@ -36,30 +70,44 @@ declare current_email text := lower(coalesce(auth.jwt() ->> 'email', ''));
 begin
   if current_email = '' then raise exception 'Authentication required'; end if;
   if not exists (select 1 from public.workers where lower(email) = current_email) then raise exception 'Worker profile not found'; end if;
-  if not exists (select 1 from public.worker_daily_reports where lower(worker_email) = current_email and report_date = current_date and actual_hours >= 6) then
-    insert into public.worker_emergency_alerts(worker_email, alert_type, message)
-    select current_email, 'six_hour_routine', 'Daily six-hour routine has not been completed or reported for today.'
-    where not exists (select 1 from public.worker_emergency_alerts where lower(worker_email) = current_email and alert_type = 'six_hour_routine' and created_at::date = current_date and status <> 'resolved')
+
+  if exists (select 1 from public.worker_daily_reports where lower(worker_email) = current_email and report_date = current_date) then
+    update public.worker_emergency_alerts set status = 'resolved', resolved_at = now()
+    where lower(worker_email) = current_email
+      and alert_type in ('missing_daily_report', 'six_hour_routine', 'under_six_hours')
+      and created_at::date = current_date and status <> 'resolved';
+    return result;
+  end if;
+
+  if exists (
+    select 1 from public.worker_shifts
+    where lower(worker_email) = current_email and shift_date = current_date
+      and started_at < now() - interval '10 hours'
+  ) and not exists (
+    select 1 from public.worker_emergency_alerts
+    where lower(worker_email) = current_email and alert_type = 'missing_daily_report'
+      and created_at::date = current_date and status <> 'resolved'
+  ) then
+    insert into public.worker_emergency_alerts(worker_email, severity, alert_type, message)
+    values (current_email, 'warning', 'missing_daily_report',
+            'Today''s daily checklist report has not been submitted.')
     returning * into result;
   end if;
+
   return result;
 end;
 $$;
 grant execute on function public.check_worker_daily_routine() to authenticated;
 
+-- Filing (or updating) the daily report clears any open routine alert for that day.
 create or replace function public.sync_worker_routine_alert()
 returns trigger language plpgsql security definer set search_path = public
 as $$
 begin
-  if new.actual_hours < 6 then
-    if not exists (select 1 from public.worker_emergency_alerts where lower(worker_email) = lower(new.worker_email) and alert_type = 'under_six_hours' and created_at::date = new.report_date and status <> 'resolved') then
-      insert into public.worker_emergency_alerts(worker_email, alert_type, message)
-      values (lower(new.worker_email), 'under_six_hours', 'The daily report records fewer than six completed hours.');
-    end if;
-  else
-    update public.worker_emergency_alerts set status = 'resolved', resolved_at = now()
-    where lower(worker_email) = lower(new.worker_email) and alert_type in ('six_hour_routine', 'under_six_hours') and created_at::date = new.report_date and status <> 'resolved';
-  end if;
+  update public.worker_emergency_alerts set status = 'resolved', resolved_at = now()
+  where lower(worker_email) = lower(new.worker_email)
+    and alert_type in ('missing_daily_report', 'six_hour_routine', 'under_six_hours')
+    and created_at::date = new.report_date and status <> 'resolved';
   return new;
 end;
 $$;
