@@ -29,12 +29,14 @@ create index if not exists worker_daily_reports_email_idx on public.worker_daily
 create index if not exists worker_emergency_alerts_email_idx on public.worker_emergency_alerts(worker_email, created_at desc);
 
 -- ----------------------------------------------------------------------------
--- Annotator Daily Work Checklist template (see starkworth_annotator_checklist.html
--- and the "Daily work checklist" panel on the Annotator Dashboard).
+-- Quarterly work appraisal (see starkworth_annotator_checklist.html and the
+-- "Quarterly work appraisal" panel on the Annotator Dashboard).
 --
--- Each annotator works a 7-section checklist every shift and files one report a
--- day. These columns carry the report fields and the saved checklist state so
--- the admin Reports tab can show exactly what each worker submitted.
+-- The 7-section work checklist is now an appraisal each annotator files once
+-- every three months, not a daily report. Day-to-day feedback comes from the
+-- enriched 90-minute check-ins (public.worker_checkins). worker_daily_reports
+-- keeps its name for compatibility but now holds one row per annotator per
+-- quarter, dated to the first day of that quarter (report_date).
 -- ----------------------------------------------------------------------------
 alter table public.worker_daily_reports
   add column if not exists platform_project text,
@@ -45,53 +47,68 @@ alter table public.worker_daily_reports
   add column if not exists checklist_pct integer not null default 0,
   add column if not exists section_progress jsonb not null default '{}'::jsonb,
   add column if not exists annotator_signoff text,
-  add column if not exists signoff_time text;
+  add column if not exists signoff_time text,
+  add column if not exists period_type text not null default 'quarter',
+  add column if not exists period_start date,
+  add column if not exists period_end date,
+  add column if not exists period_label text;
 
 alter table public.worker_daily_reports drop constraint if exists worker_daily_reports_checklist_pct_check;
 alter table public.worker_daily_reports add constraint worker_daily_reports_checklist_pct_check
   check (checklist_pct between 0 and 100);
 
+alter table public.worker_daily_reports drop constraint if exists worker_daily_reports_period_type_check;
+alter table public.worker_daily_reports add constraint worker_daily_reports_period_type_check
+  check (period_type in ('quarter', 'day', 'month'));
+
 -- The rigid six-hour routine is retired. Shifts are configurable per annotator
--- (worker_shift_settings) and pay is task-based, so the report tracks the hours
--- actually worked and alerts fire on a missing report, not on "fewer than six".
+-- (worker_shift_settings) and pay is task-based; the appraisal records the
+-- typical hours worked over the period rather than a fixed daily figure.
 alter table public.worker_daily_reports alter column scheduled_hours drop not null;
 alter table public.worker_daily_reports alter column scheduled_hours drop default;
 alter table public.worker_daily_reports drop constraint if exists worker_daily_reports_scheduled_hours_check;
 alter table public.worker_daily_reports alter column task_summary drop not null;
 
--- Called on every Annotator Dashboard load. Resolves a stale "missing report"
--- alert once today's report is in, and raises one only when the annotator ran a
--- shift today that has been over for 10+ hours with still no report filed.
+-- Called on every Annotator Dashboard load. Day-to-day accountability is now the
+-- 90-minute check-ins, so this raises a "missed check-ins" alert when the
+-- annotator ran a shift today whose due slots are less than half submitted, and
+-- resolves it once they are caught up.
 create or replace function public.check_worker_daily_routine()
 returns public.worker_emergency_alerts language plpgsql security definer set search_path = public
 as $$
-declare result public.worker_emergency_alerts;
-declare current_email text := lower(coalesce(auth.jwt() ->> 'email', ''));
+declare
+  result public.worker_emergency_alerts;
+  current_email text := lower(coalesce(auth.jwt() ->> 'email', ''));
+  v_due integer;
+  v_submitted integer;
 begin
   if current_email = '' then raise exception 'Authentication required'; end if;
   if not exists (select 1 from public.workers where lower(email) = current_email) then raise exception 'Worker profile not found'; end if;
 
-  if exists (select 1 from public.worker_daily_reports where lower(worker_email) = current_email and report_date = current_date) then
+  select
+    count(*) filter (where c.due_at <= now()),
+    count(*) filter (where c.due_at <= now() and c.submitted_at is not null)
+  into v_due, v_submitted
+  from public.worker_checkins c
+  join public.worker_shifts s on s.id = c.shift_id
+  where lower(c.worker_email) = current_email and s.shift_date = current_date;
+
+  if coalesce(v_due, 0) >= 2 and v_submitted * 2 < v_due then
+    if not exists (
+      select 1 from public.worker_emergency_alerts
+      where lower(worker_email) = current_email and alert_type = 'missed_checkins'
+        and created_at::date = current_date and status <> 'resolved'
+    ) then
+      insert into public.worker_emergency_alerts(worker_email, severity, alert_type, message)
+      values (current_email, 'warning', 'missed_checkins',
+              format('%s of %s due 90-minute check-ins submitted today.', v_submitted, v_due))
+      returning * into result;
+    end if;
+  else
     update public.worker_emergency_alerts set status = 'resolved', resolved_at = now()
     where lower(worker_email) = current_email
-      and alert_type in ('missing_daily_report', 'six_hour_routine', 'under_six_hours')
+      and alert_type in ('missed_checkins', 'missing_daily_report', 'six_hour_routine', 'under_six_hours')
       and created_at::date = current_date and status <> 'resolved';
-    return result;
-  end if;
-
-  if exists (
-    select 1 from public.worker_shifts
-    where lower(worker_email) = current_email and shift_date = current_date
-      and started_at < now() - interval '10 hours'
-  ) and not exists (
-    select 1 from public.worker_emergency_alerts
-    where lower(worker_email) = current_email and alert_type = 'missing_daily_report'
-      and created_at::date = current_date and status <> 'resolved'
-  ) then
-    insert into public.worker_emergency_alerts(worker_email, severity, alert_type, message)
-    values (current_email, 'warning', 'missing_daily_report',
-            'Today''s daily checklist report has not been submitted.')
-    returning * into result;
   end if;
 
   return result;
@@ -99,7 +116,8 @@ end;
 $$;
 grant execute on function public.check_worker_daily_routine() to authenticated;
 
--- Filing (or updating) the daily report clears any open routine alert for that day.
+-- Legacy: older builds fired six-hour / missing-report alerts off this table.
+-- Writing a row still clears any such alert left open on its date.
 create or replace function public.sync_worker_routine_alert()
 returns trigger language plpgsql security definer set search_path = public
 as $$

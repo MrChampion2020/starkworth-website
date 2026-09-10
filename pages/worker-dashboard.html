@@ -111,40 +111,43 @@
           </div>
 
           <div class="history-panel" id="checkinCard">
-            <h3>Today's check-ins</h3>
-            <p style="font-size:13px;color:var(--text-muted);">Start your shift, then post an update on your assigned client every 90 minutes. Report at least 10 minutes early to stay green.</p>
+            <h3>90-minute progress reports</h3>
+            <p style="font-size:13px;color:var(--text-muted);">Start your shift, then file a short progress report on your assigned client every 90 minutes. Report at least 10 minutes early to stay green — this is your main daily feedback channel to the admin team.</p>
             <div id="shiftNotStarted" style="margin-top:14px;">
               <button class="btn btn-primary" type="button" onclick="handleStartShift()" id="startShiftBtn">Start shift</button>
             </div>
             <div id="shiftStarted" style="display:none;">
               <div class="checkin-slot-grid" id="checkinSlotGrid"></div>
               <div id="checkinFormWrap" style="display:none;">
-                <h4 style="margin:12px 0 0;">Post update for <span id="nextSlotLabel"></span></h4>
+                <h4 style="margin:12px 0 0;">Progress report for <span id="nextSlotLabel"></span></h4>
                 <div class="checkin-form">
                   <select id="checkinOwner"><option value="">Select assigned client…</option></select>
                   <select id="checkinProject"><option value="">Select project (optional)…</option></select>
                   <select id="checkinTask"><option value="">Select task (optional)…</option></select>
-                  <textarea id="checkinUpdate" rows="3" placeholder="What did you get done since the last check-in?"></textarea>
+                  <textarea id="checkinUpdate" rows="3" placeholder="What did you get done in the last 90 minutes?"></textarea>
+                  <input type="number" id="checkinItems" min="0" step="1" placeholder="Items / tasks completed this block (optional)">
+                  <textarea id="checkinQuality" rows="2" placeholder="Quality issues or rejections seen this block? (optional)"></textarea>
+                  <textarea id="checkinGuideline" rows="2" placeholder="Guideline questions or ambiguities to flag? (optional)"></textarea>
                   <textarea id="checkinBlockers" rows="2" placeholder="Any blockers? (optional)"></textarea>
-                  <button class="btn btn-primary" type="button" onclick="handleSubmitCheckin()" id="submitCheckinBtn">Submit check-in</button>
+                  <button class="btn btn-primary" type="button" onclick="handleSubmitCheckin()" id="submitCheckinBtn">Submit progress report</button>
                   <span id="checkinStatus" style="font-size:13px;color:var(--text-muted);"></span>
                 </div>
               </div>
-              <p id="allCheckinsDone" style="display:none;font-size:13px;color:var(--accent);margin-top:12px;">All check-ins for today are submitted. Nice work.</p>
+              <p id="allCheckinsDone" style="display:none;font-size:13px;color:var(--accent);margin-top:12px;">All progress reports for today are submitted. Nice work.</p>
             </div>
           </div>
 
           <div class="history-panel" id="dailyChecklistCard">
             <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;">
-              <h3>Daily work checklist</h3>
+              <h3>Quarterly work appraisal</h3>
               <a href="../starkworth_annotator_checklist.html" target="_blank" rel="noopener" style="font-size:12px;">Open printable version →</a>
             </div>
-            <p style="font-size:13px;color:var(--text-muted);">Work through each section during your shift, fill in the daily work report, then submit. One report per day — you can reopen and update it until end of shift.</p>
+            <p style="font-size:13px;color:var(--text-muted);">Filed once every three months for appraisal. Work through each section, complete the summary below, then submit. Day-to-day feedback goes in your 90-minute progress reports above — not here.</p>
 
             <div class="checkin-form" style="margin-top:6px;">
-              <label style="font-size:13px;">Report date
-                <input type="date" id="dcDate" style="width:100%;">
-              </label>
+              <div style="font-size:13px;font-weight:600;color:var(--primary);">Appraisal period: <span id="dcPeriodLabel">—</span></div>
+              <div id="dcPeriodNote" style="font-size:12px;color:var(--text-muted);"></div>
+              <input type="hidden" id="dcDate">
             </div>
 
             <div class="dc-progress">
@@ -154,30 +157,30 @@
 
             <div id="dcSections"></div>
 
-            <h4 style="margin:18px 0 0;">Daily work report</h4>
+            <h4 style="margin:18px 0 0;">Appraisal summary</h4>
             <div class="dc-report-grid">
-              <div><label for="dcPlatform">Platform / project</label><input type="text" id="dcPlatform" placeholder="e.g. Outlier — image labeling"></div>
-              <div><label for="dcItems">Tasks / items completed</label><input type="number" id="dcItems" min="0" placeholder="e.g. 140"></div>
-              <div><label for="dcHours">Active hours</label><input type="number" id="dcHours" min="0" max="24" step="0.25" placeholder="e.g. 5.5"></div>
-              <div><label for="dcCheckins">Check-ins submitted</label><input type="text" id="dcCheckins" placeholder="auto-filled from today"></div>
-              <div><label for="dcQuality">Quality flags / rejections</label><input type="text" id="dcQuality" placeholder="None / count + reason"></div>
-              <div><label for="dcGuidelines">Guideline updates today</label><input type="text" id="dcGuidelines" placeholder="None / describe change"></div>
+              <div><label for="dcPlatform">Main platforms / projects this quarter</label><input type="text" id="dcPlatform" placeholder="e.g. Outlier — image labeling, RLHF"></div>
+              <div><label for="dcItems">Approx. items / tasks completed</label><input type="number" id="dcItems" min="0" placeholder="quarter total"></div>
+              <div><label for="dcHours">Typical daily active hours</label><input type="number" id="dcHours" min="0" max="24" step="0.25" placeholder="e.g. 5.5"></div>
+              <div><label for="dcCheckins">90-minute report compliance</label><input type="text" id="dcCheckins" placeholder="e.g. mostly green / 2 missed"></div>
+              <div><label for="dcQuality">Quality trend &amp; rejections</label><input type="text" id="dcQuality" placeholder="improving / stable / issues + reason"></div>
+              <div><label for="dcGuidelines">Guideline changes handled</label><input type="text" id="dcGuidelines" placeholder="notable updates you adapted to"></div>
             </div>
             <div class="dc-report-full">
-              <label for="dcSummary">What did you work on today?</label>
-              <textarea id="dcSummary" rows="2" placeholder="Short summary of the work completed"></textarea>
+              <label for="dcSummary">Summary of your work this quarter</label>
+              <textarea id="dcSummary" rows="3" placeholder="What you worked on, what went well, where you improved"></textarea>
             </div>
             <div class="dc-report-full">
-              <label for="dcBlockers">Blockers, tech issues &amp; notes for admin</label>
-              <textarea id="dcBlockers" rows="2" placeholder="Describe any blockers, platform outages, or login issues — or write 'None'"></textarea>
+              <label for="dcBlockers">Ongoing blockers, tooling gaps &amp; support needs</label>
+              <textarea id="dcBlockers" rows="2" placeholder="Anything holding you back, or write 'None'"></textarea>
             </div>
             <div class="dc-report-grid">
               <div><label for="dcSignoff">Annotator sign-off (name)</label><input type="text" id="dcSignoff" placeholder="Your full name"></div>
-              <div><label for="dcSignoffTime">Time finished</label><input type="text" id="dcSignoffTime" placeholder="e.g. 17:40"></div>
+              <div><label for="dcSignoffTime">Date signed</label><input type="text" id="dcSignoffTime" placeholder="e.g. 30 Sep 2026"></div>
             </div>
 
             <div class="dc-save-row">
-              <button class="btn btn-primary" type="button" onclick="handleSaveDailyReport()" id="dcSaveBtn">Submit daily report</button>
+              <button class="btn btn-primary" type="button" onclick="handleSaveDailyReport()" id="dcSaveBtn">Submit appraisal</button>
               <span id="dcStatus" style="font-size:13px;color:var(--text-muted);"></span>
             </div>
           </div>
@@ -495,7 +498,7 @@
       grid.innerHTML = cinSlots.map(s => `
         <div class="checkin-slot">
           ${flagChip(s.flag)}
-          <small>Check-in #${s.slot_index}<br>due ${escapeHtml(formatTime(s.due_at))}${s.submitted_at ? '<br>sent ' + escapeHtml(formatTime(s.submitted_at)) : ''}</small>
+          <small>Report #${s.slot_index}<br>due ${escapeHtml(formatTime(s.due_at))}${s.submitted_at ? '<br>sent ' + escapeHtml(formatTime(s.submitted_at)) : ''}</small>
         </div>`).join('');
 
       const next = cinSlots.find(s => !s.submitted_at);
@@ -535,7 +538,7 @@
     async function handleSubmitCheckin() {
       const status = document.getElementById('checkinStatus');
       const update = document.getElementById('checkinUpdate').value.trim();
-      if (!update) { status.textContent = 'An update is required.'; return; }
+      if (!update) { status.textContent = 'A progress update is required.'; return; }
       const btn = document.getElementById('submitCheckinBtn');
       btn.disabled = true; btn.textContent = 'Submitting…';
       const result = await submitWorkerCheckin({
@@ -543,16 +546,19 @@
         project_id: document.getElementById('checkinProject').value || null,
         task_id: document.getElementById('checkinTask').value || null,
         update_text: update,
+        items_completed: document.getElementById('checkinItems').value,
+        quality_issues: document.getElementById('checkinQuality').value.trim() || null,
+        guideline_questions: document.getElementById('checkinGuideline').value.trim() || null,
         blockers: document.getElementById('checkinBlockers').value.trim() || null
       });
-      btn.disabled = false; btn.textContent = 'Submit check-in';
+      btn.disabled = false; btn.textContent = 'Submit progress report';
       if (result.ok) {
-        document.getElementById('checkinUpdate').value = '';
-        document.getElementById('checkinBlockers').value = '';
-        status.textContent = 'Check-in submitted.';
+        ['checkinUpdate','checkinItems','checkinQuality','checkinGuideline','checkinBlockers']
+          .forEach(id => { document.getElementById(id).value = ''; });
+        status.textContent = 'Progress report submitted.';
         await renderCheckins(cinSession);
       } else {
-        status.textContent = (result.data && (result.data.message || result.data.hint)) || 'Could not submit the check-in.';
+        status.textContent = (result.data && (result.data.message || result.data.hint)) || 'Could not submit the progress report.';
       }
     }
 
@@ -745,7 +751,18 @@
       return String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
     }
 
-    function dcDraftKey(date) { return 'sw_daily_' + dcEmail + '_' + (date || document.getElementById('dcDate').value); }
+    function dcDraftKey(date) { return 'sw_appraisal_' + dcEmail + '_' + (date || document.getElementById('dcDate').value); }
+
+    // Current calendar quarter as { start, end (ISO dates), label }.
+    function dcQuarter(ref) {
+      const d = ref == null ? new Date()
+        : (typeof ref === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(ref) ? new Date(ref + 'T12:00:00') : new Date(ref));
+      const q = Math.floor(d.getMonth() / 3);           // 0..3
+      const start = new Date(d.getFullYear(), q * 3, 1);
+      const end = new Date(d.getFullYear(), q * 3 + 3, 0);
+      const iso = x => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+      return { start: iso(start), end: iso(end), label: `Q${q + 1} ${d.getFullYear()}` };
+    }
 
     function dcCollectReport() {
       return {
@@ -848,12 +865,6 @@
       document.getElementById('dcSignoffTime').value = r.signoff_time || '';
     }
 
-    function dcAutoCheckins() {
-      const el = document.getElementById('dcCheckins');
-      if (el.value.trim() || !Array.isArray(cinSlots) || !cinSlots.length) return;
-      el.value = cinSlots.filter(s => s.submitted_at).length + ' of ' + cinSlots.length;
-    }
-
     async function dcLoadForDate(date) {
       dcLoadedDate = date;
       dcState = {};
@@ -863,7 +874,7 @@
         if (remote.checklist && typeof remote.checklist === 'object') dcState = remote.checklist;
         dcApplyReport(remote);
         applied = true;
-        document.getElementById('dcStatus').textContent = 'Loaded your submitted report for this date. Update and resubmit any time before end of shift.';
+        document.getElementById('dcStatus').textContent = 'Loaded your appraisal for ' + dcQuarter(date).label + '. You can revise and resubmit it until the quarter ends.';
       }
       if (!applied) {
         try {
@@ -871,27 +882,31 @@
           if (draft) {
             if (draft.checklist) dcState = draft.checklist;
             if (draft.report) dcApplyReport(draft.report);
-            document.getElementById('dcStatus').textContent = 'Restored your unsaved draft for this date.';
+            document.getElementById('dcStatus').textContent = 'Restored your unsaved appraisal draft.';
           } else {
             document.getElementById('dcStatus').textContent = '';
           }
         } catch (_) {}
       }
       dcBuildSections();
-      dcAutoCheckins();
     }
 
     async function handleSaveDailyReport() {
       const btn = document.getElementById('dcSaveBtn');
       const status = document.getElementById('dcStatus');
       const date = document.getElementById('dcDate').value;
-      if (!date) { status.textContent = 'Pick a report date.'; return; }
+      const q = dcQuarter(date);
+      if (!date) { status.textContent = 'No appraisal period set.'; return; }
       const r = dcCollectReport();
       const pct = dcUpdateProgress();
       btn.disabled = true; btn.textContent = 'Submitting…';
       const ok = await saveWorkerDailyReport({
         worker_email: dcEmail,
         report_date: date,
+        period_type: 'quarter',
+        period_start: q.start,
+        period_end: q.end,
+        period_label: q.label,
         scheduled_hours: null,
         actual_hours: Number(r.hours) || 0,
         tasks_completed: Math.max(0, parseInt(r.items, 10) || 0),
@@ -908,29 +923,31 @@
         signoff_time: r.signoff_time || null,
         status: 'submitted'
       });
-      btn.disabled = false; btn.textContent = 'Submit daily report';
+      btn.disabled = false; btn.textContent = 'Submit appraisal';
       if (ok) {
-        status.textContent = 'Daily report submitted (' + pct + '% checklist). You can update it until end of shift.';
+        status.textContent = q.label + ' appraisal submitted (' + pct + '% checklist). You can revise it until the quarter ends.';
         try { localStorage.removeItem(dcDraftKey(date)); } catch (_) {}
       } else {
-        status.textContent = 'Could not submit the report. Your draft is saved locally — try again.';
+        status.textContent = 'Could not submit the appraisal. Your draft is saved locally — try again.';
       }
     }
 
     async function initDailyChecklist(email) {
       dcEmail = (email || '').toLowerCase();
-      const dateInput = document.getElementById('dcDate');
-      dateInput.value = new Date().toISOString().slice(0, 10);
+      const q = dcQuarter();
+      document.getElementById('dcDate').value = q.start;
+      const fmt = s => new Date(s + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      document.getElementById('dcPeriodLabel').textContent = q.label + ' (' + fmt(q.start) + ' – ' + fmt(q.end) + ')';
+      document.getElementById('dcPeriodNote').textContent = 'Filed once this quarter. Next appraisal opens ' + fmt(dcQuarter(new Date(q.end + 'T23:59:59').getTime() + 86400000).start) + '.';
       ['dcPlatform','dcItems','dcHours','dcCheckins','dcQuality','dcGuidelines','dcSummary','dcBlockers','dcSignoff','dcSignoffTime']
         .forEach(id => document.getElementById(id).addEventListener('input', dcSaveDraft));
-      dateInput.addEventListener('change', () => dcLoadForDate(dateInput.value));
       if (!document.getElementById('dcSignoff').value) {
         const w = await fetchWorkerByEmail(dcEmail).catch(() => null);
         if (w && (w.first_name || w.last_name)) {
           document.getElementById('dcSignoff').value = [w.first_name, w.last_name].filter(Boolean).join(' ');
         }
       }
-      await dcLoadForDate(dateInput.value);
+      await dcLoadForDate(q.start);
     }
 
     (async function init() {

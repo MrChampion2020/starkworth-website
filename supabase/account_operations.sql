@@ -9,8 +9,10 @@
 --      owners (public.agreements) and the annotators (public.workers) who
 --      service their Outlier accounts. Admins create and reassign them.
 --   2. worker_shifts + worker_checkins - an annotator starts a shift, then
---      owes an update on their assigned client/task every 90 minutes for the
---      6-hour routine (4 slots). The worker_checkin_status view derives a
+--      files a 90-minute progress report on their assigned client/task each
+--      interval (slot count comes from worker_shift_settings). Each report
+--      carries the free-text update plus items done, quality issues, guideline
+--      questions and blockers. The worker_checkin_status view derives a
 --      green / yellow / red flag per slot so every dashboard agrees.
 --   3. owner_projects + project_tasks + task_feedback - admins manage an
 --      account owner's projects and tasks, set status, and read the feedback
@@ -178,13 +180,24 @@ create table if not exists public.worker_checkins (
 create index if not exists worker_checkins_email_idx on public.worker_checkins (worker_email, due_at desc);
 create index if not exists worker_checkins_owner_idx on public.worker_checkins (owner_email, due_at desc);
 
+-- The 90-minute check-in is a structured progress report: alongside the free-text
+-- update and blockers it records what got done in the block plus any quality or
+-- guideline issues, so the admin team gets richer feedback every interval.
+alter table public.worker_checkins
+  add column if not exists items_completed integer check (items_completed is null or items_completed >= 0),
+  add column if not exists quality_issues text,
+  add column if not exists guideline_questions text;
+
 -- Green  : submitted 10+ minutes before due
 -- Yellow : submitted from <10 min before up to 30 min after due
 -- Red    : submitted more than 30 min after due, OR nothing submitted and
 --          the 30-minute grace window has passed
 -- Due    : not submitted, inside the -10min..+30min window right now
 -- Pending: not submitted, more than 10 minutes before due
-create or replace view public.worker_checkin_status
+-- Dropped and recreated (not CREATE OR REPLACE) so the progress-report columns
+-- can slot in beside the free-text update rather than being forced to the end.
+drop view if exists public.worker_checkin_status;
+create view public.worker_checkin_status
 with (security_invoker = on) as
 select
   c.id,
@@ -198,6 +211,9 @@ select
   c.task_id,
   c.update_text,
   c.blockers,
+  c.items_completed,
+  c.quality_issues,
+  c.guideline_questions,
   c.created_at,
   s.shift_date,
   s.started_at as shift_started_at,
@@ -211,6 +227,8 @@ select
   end as flag
 from public.worker_checkins c
 join public.worker_shifts s on s.id = c.shift_id;
+
+grant select on public.worker_checkin_status to authenticated;
 
 -- ============================================================================
 -- RPCs
@@ -262,15 +280,20 @@ end;
 $$;
 grant execute on function public.start_worker_shift() to authenticated;
 
--- Annotator submits one check-in for today. Fills the earliest matching slot
--- (by slot_index) that has not been submitted yet when p_slot_index is null.
+-- Annotator submits one 90-minute progress report for today. Fills the earliest
+-- matching slot (by slot_index) that has not been submitted yet when
+-- p_slot_index is null.
+drop function if exists public.submit_worker_checkin(integer, text, uuid, uuid, text, text);
 create or replace function public.submit_worker_checkin(
   p_slot_index integer default null,
   p_owner_email text default null,
   p_project_id uuid default null,
   p_task_id uuid default null,
   p_update_text text default null,
-  p_blockers text default null
+  p_blockers text default null,
+  p_items_completed integer default null,
+  p_quality_issues text default null,
+  p_guideline_questions text default null
 )
 returns public.worker_checkins
 language plpgsql security definer set search_path = public
@@ -281,6 +304,9 @@ declare
 begin
   if current_email = '' then raise exception 'Authentication required'; end if;
   if coalesce(btrim(p_update_text), '') = '' then raise exception 'An update is required'; end if;
+  if p_items_completed is not null and p_items_completed < 0 then
+    raise exception 'Items completed cannot be negative';
+  end if;
 
   select c.* into target
   from public.worker_checkins c
@@ -302,14 +328,17 @@ begin
       project_id = p_project_id,
       task_id = p_task_id,
       update_text = btrim(p_update_text),
-      blockers = nullif(btrim(coalesce(p_blockers, '')), '')
+      blockers = nullif(btrim(coalesce(p_blockers, '')), ''),
+      items_completed = p_items_completed,
+      quality_issues = nullif(btrim(coalesce(p_quality_issues, '')), ''),
+      guideline_questions = nullif(btrim(coalesce(p_guideline_questions, '')), '')
   where id = target.id
   returning * into target;
 
   return target;
 end;
 $$;
-grant execute on function public.submit_worker_checkin(integer, text, uuid, uuid, text, text) to authenticated;
+grant execute on function public.submit_worker_checkin(integer, text, uuid, uuid, text, text, integer, text, text) to authenticated;
 
 -- Admin reassigns an account owner from one annotator to another in one step.
 create or replace function public.reassign_owner(

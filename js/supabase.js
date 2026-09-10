@@ -684,7 +684,10 @@ async function submitWorkerCheckin(payload) {
       p_project_id: payload.project_id || null,
       p_task_id: payload.task_id || null,
       p_update_text: payload.update_text || null,
-      p_blockers: payload.blockers || null
+      p_blockers: payload.blockers || null,
+      p_items_completed: (payload.items_completed === '' || payload.items_completed == null) ? null : Number(payload.items_completed),
+      p_quality_issues: payload.quality_issues || null,
+      p_guideline_questions: payload.guideline_questions || null
     })
   });
   return { ok: response.ok, data: await response.json().catch(() => null) };
