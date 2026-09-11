@@ -69,52 +69,10 @@ alter table public.worker_daily_reports alter column scheduled_hours drop defaul
 alter table public.worker_daily_reports drop constraint if exists worker_daily_reports_scheduled_hours_check;
 alter table public.worker_daily_reports alter column task_summary drop not null;
 
--- Called on every Annotator Dashboard load. Day-to-day accountability is now the
--- 90-minute check-ins, so this raises a "missed check-ins" alert when the
--- annotator ran a shift today whose due slots are less than half submitted, and
--- resolves it once they are caught up.
-create or replace function public.check_worker_daily_routine()
-returns public.worker_emergency_alerts language plpgsql security definer set search_path = public
-as $$
-declare
-  result public.worker_emergency_alerts;
-  current_email text := lower(coalesce(auth.jwt() ->> 'email', ''));
-  v_due integer;
-  v_submitted integer;
-begin
-  if current_email = '' then raise exception 'Authentication required'; end if;
-  if not exists (select 1 from public.workers where lower(email) = current_email) then raise exception 'Worker profile not found'; end if;
-
-  select
-    count(*) filter (where c.due_at <= now()),
-    count(*) filter (where c.due_at <= now() and c.submitted_at is not null)
-  into v_due, v_submitted
-  from public.worker_checkins c
-  join public.worker_shifts s on s.id = c.shift_id
-  where lower(c.worker_email) = current_email and s.shift_date = current_date;
-
-  if coalesce(v_due, 0) >= 2 and v_submitted * 2 < v_due then
-    if not exists (
-      select 1 from public.worker_emergency_alerts
-      where lower(worker_email) = current_email and alert_type = 'missed_checkins'
-        and created_at::date = current_date and status <> 'resolved'
-    ) then
-      insert into public.worker_emergency_alerts(worker_email, severity, alert_type, message)
-      values (current_email, 'warning', 'missed_checkins',
-              format('%s of %s due 90-minute check-ins submitted today.', v_submitted, v_due))
-      returning * into result;
-    end if;
-  else
-    update public.worker_emergency_alerts set status = 'resolved', resolved_at = now()
-    where lower(worker_email) = current_email
-      and alert_type in ('missed_checkins', 'missing_daily_report', 'six_hour_routine', 'under_six_hours')
-      and created_at::date = current_date and status <> 'resolved';
-  end if;
-
-  return result;
-end;
-$$;
-grant execute on function public.check_worker_daily_routine() to authenticated;
+-- check_worker_daily_routine() is now defined in supabase/daily_task_grid.sql,
+-- which runs after this file and repoints it at the daily task grid instead of
+-- the retired 90-minute check-ins. Not redefined here to avoid two competing
+-- versions depending on run order.
 
 -- Legacy: older builds fired six-hour / missing-report alerts off this table.
 -- Writing a row still clears any such alert left open on its date.

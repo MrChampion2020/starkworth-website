@@ -480,8 +480,8 @@
         <input type="text" id="r-hours" placeholder="e.g. 5.5">
       </div>
       <div class="report-field">
-        <label>Check-ins submitted</label>
-        <input type="text" id="r-checkins" placeholder="e.g. 4 of 4">
+        <label>Task grid hours planned</label>
+        <input type="text" id="r-checkins" placeholder="e.g. 10 of 10">
       </div>
       <div class="report-field">
         <label>Quality flags / rejections</label>
@@ -568,15 +568,15 @@ const SECTIONS = [
   },
   {
     id: "checkins",
-    title: "90-minute check-ins",
-    note: "After starting your shift, post a dashboard update on your assigned client every 90 minutes.",
+    title: "Daily task grid",
+    note: "At resumption, plan your day's tasks in the dashboard's task grid; revisit a cell during the day to mark it done.",
     tasks: [
-      { id: "k1", text: "Open the “Today's check-ins” panel and confirm the next slot's due time", time: "Ongoing" },
-      { id: "k2", text: "Select the assigned client, and the project / task where relevant", time: "Every 90 min" },
-      { id: "k3", text: "Write what you completed since the last check-in (be specific with counts)", time: "Every 90 min" },
-      { id: "k4", text: "Record any blockers in the blockers field so admin can act on them", time: "Every 90 min" },
-      { id: "k5", text: "Submit before the slot turns yellow / red; keep all slots green", time: "Every 90 min" },
-      { id: "k6", text: "Confirm “All check-ins for today are submitted” shows at end of shift", time: "End of shift" },
+      { id: "k1", text: "At resumption, fill in a planned task for every hour of your working day", time: "At resumption" },
+      { id: "k2", text: "Select the assigned client, and the project / task where relevant, per cell", time: "As needed" },
+      { id: "k3", text: "Write a specific task for each hour, not a vague placeholder", time: "At resumption" },
+      { id: "k4", text: "Reopen a cell as you work it and mark it In progress, then Done, or Blocked", time: "Ongoing" },
+      { id: "k5", text: "Add notes on a cell for anything admin should know about that hour", time: "As needed" },
+      { id: "k6", text: "Keep working through the grid until every hour for today is accounted for", time: "End of shift" },
     ]
   },
   {
@@ -608,7 +608,7 @@ const SECTIONS = [
     note: "Payouts go out every Wednesday by 3:00 PM (CST), based on task performance and input.",
     tasks: [
       { id: "e1", text: "Submit any remaining in-progress items or save drafts per the platform's rules", time: "End of shift" },
-      { id: "e2", text: "Submit your final check-in and complete the daily work report below", time: "End of shift" },
+      { id: "e2", text: "Mark every remaining hour in today's task grid as Done or Blocked", time: "End of shift" },
       { id: "e3", text: "Record today's completed item count and active hours for the week", time: "End of shift" },
       { id: "e4", text: "On the last working day of the week, declare the weekly task value (USD) per client", time: "Weekly (Fri/Sat)" },
       { id: "e5", text: "Add notes for the admin with the declaration if anything affected the week's output", time: "Weekly" },
@@ -776,7 +776,7 @@ function exportSummary() {
   txt += `Platform/project: ${document.getElementById('r-platform').value || '-'}\n`;
   txt += `Items completed: ${document.getElementById('r-items').value || '-'}\n`;
   txt += `Active hours: ${document.getElementById('r-hours').value || '-'}\n`;
-  txt += `Check-ins submitted: ${document.getElementById('r-checkins').value || '-'}\n`;
+  txt += `Task grid hours planned: ${document.getElementById('r-checkins').value || '-'}\n`;
   txt += `Quality flags: ${document.getElementById('r-quality').value || '-'}\n`;
   txt += `Guideline updates: ${document.getElementById('r-guidelines').value || '-'}\n`;
   txt += `Blockers / notes: ${document.getElementById('r-blockers').value || '-'}\n`;

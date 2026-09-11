@@ -138,9 +138,15 @@ window.confirmReferralWithoutCode = function confirmReferralWithoutCode() {
   });
   sidebar.id = 'dashboardSidebar';
 
-  const panels = [...content.querySelectorAll('.history-panel')];
+  // Scoped to #affiliateArea (present on the Worker and Account Owner
+  // dashboards): its five history-panels are always earnings, payouts,
+  // withdrawals, commissions, tasks in that order. Selecting from the whole
+  // page instead would also catch earlier panels (check-ins, task value,
+  // etc.) and misassign these ids onto them.
+  const affiliateArea = content.querySelector('#affiliateArea') || content;
+  const panels = [...affiliateArea.querySelectorAll('.history-panel')];
   const targets = ['earnings', 'payouts', 'withdrawals', 'commissions', 'tasks'];
-  panels.forEach((panel, index) => { if (targets[index]) panel.id = targets[index]; });
+  panels.forEach((panel, index) => { if (targets[index] && !panel.id) panel.id = targets[index]; });
   const overview = content.querySelector('#dashboardBody') || content.querySelector('.dashboard-grid');
   if (overview) overview.id = 'overview';
   const links = sidebar.querySelectorAll('.dashboard-nav-link[data-target]');

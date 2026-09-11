@@ -12,8 +12,8 @@
   <link rel="apple-touch-icon" href="../assets/icons/apple-touch-icon.png" />
   <link rel="manifest" href="../site.webmanifest" />
   <meta name="theme-color" content="#022c22" />
-  <link rel="stylesheet" href="../css/style.css" />
-  <link rel="stylesheet" href="../css/pages.css" />
+  <link rel="stylesheet" href="../css/style.css?v=202609111258" />
+  <link rel="stylesheet" href="../css/pages.css?v=202609111258" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
@@ -81,18 +81,23 @@
     .admin-profile-menu a, .admin-profile-menu button { display:block; width:100%; padding:10px; border:0; border-radius:7px; background:none; color:#022c22; text-align:left; font:600 13px var(--font-body); cursor:pointer; }
     .admin-profile-menu a:hover, .admin-profile-menu button:hover { background:#d1fae5; }
 
-    /* Check-in flag chips (shared colour language with the worker/owner dashboards) */
-    .flag-chip { display:inline-flex; align-items:center; gap:5px; padding:4px 9px; border-radius:999px; font-size:11px; font-weight:700; text-transform:capitalize; }
-    .flag-chip::before { content:""; width:7px; height:7px; border-radius:50%; background:currentColor; }
-    .flag-green  { background:#d1fae5; color:#047857; }
-    .flag-yellow { background:#fef3c7; color:#b45309; }
-    .flag-red    { background:#fee2e2; color:#b91c1c; }
-    .flag-due    { background:#e0e7ff; color:#4338ca; }
-    .flag-pending{ background:#f1f5f9; color:#64748b; }
-    .checkin-slot-grid { display:flex; flex-wrap:wrap; gap:6px; }
-    .checkin-slot { border:1px solid var(--border); border-radius:10px; padding:8px 10px; min-width:132px; }
-    .checkin-slot small { display:block; color:var(--text-muted); font-size:11px; margin-top:4px; }
     .admin-inline-select { padding:5px 8px; border:1px solid var(--border); border-radius:7px; font:600 12px var(--font-body); background:#fff; }
+
+    /* Daily task grid (shared visual language with the worker dashboard) */
+    .tg-wrap { overflow-x:auto; }
+    .tg-table { border-collapse:collapse; width:100%; min-width:900px; }
+    .tg-table th, .tg-table td { border:1px solid var(--border); padding:0; }
+    .tg-table th { background:var(--accent-light); color:var(--primary); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; padding:8px 6px; white-space:nowrap; }
+    .tg-table th:first-child, .tg-table td:first-child { position:sticky; left:0; background:var(--accent-light); z-index:2; min-width:170px; text-align:left; padding:8px 12px; }
+    .tg-table td:first-child { background:#fff; font-weight:600; font-size:13px; }
+    .tg-cell { width:88px; min-width:88px; height:48px; padding:5px 7px; font-size:11px; line-height:1.3; vertical-align:top; background:#fff; }
+    .tg-cell.empty { color:var(--text-faint); }
+    .tg-cell.status-pending, .tg-cell.status-in_progress { background:#fbdede; }
+    .tg-cell.status-done { background:#d7ecd4; }
+    .tg-cell.status-blocked { background:#f3c9dc; }
+    .tg-legend { display:flex; gap:16px; align-items:center; flex-wrap:wrap; padding:12px 16px; font-size:12px; color:var(--text-muted); }
+    .tg-dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+    .tg-row-empty td:not(:first-child) { background:#fafafa; }
     .admin-mini-btn { border:none; border-radius:6px; padding:4px 10px; font-size:11px; font-weight:600; cursor:pointer; color:#fff; }
     .admin-mini-btn.danger { background:#dc2626; }
     .admin-mini-btn.neutral { background:#475569; }
@@ -427,26 +432,25 @@
     <div id="tab-reports" class="admin-tab-content admin-container" style="display:none;">
       <div class="admin-page-title">
         <h1>Annotator Reports</h1>
-        <p>Every started shift owes a 90-minute progress report on the assigned client. Green = reported 10+ min early, yellow = up to 30 min late, red = missed or more than 30 min late. The 7-section work checklist is now a quarterly appraisal (bottom card).</p>
+        <p>At resumption, each annotator plans their day by filling one cell per working hour with that hour's task; they revisit a cell during the day to mark it done. Pink/red = pending or in progress, green = done. The 7-section work checklist is now a quarterly appraisal (further down).</p>
       </div>
 
       <div class="admin-card">
         <div class="admin-card-header">
-          <h3>90-minute progress reports</h3>
+          <h3>Daily task grid</h3>
           <div style="display:flex; gap:10px; align-items:center;">
-            <input type="date" id="reportsDate" class="admin-inline-select" />
+            <input type="date" id="reportsDate" class="admin-inline-select" onchange="loadReportsData()" />
             <button class="admin-export-btn" onclick="loadReportsData()"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 1 3 6.7"/><path d="M3 16v-4h4"/></svg> Refresh</button>
           </div>
         </div>
-        <div class="admin-table-wrapper">
-          <table class="admin-table">
-            <thead>
-              <tr><th>Annotator</th><th>Shift start</th><th>Report slots</th><th>Latest report</th></tr>
-            </thead>
-            <tbody id="reportsTableBody">
-              <tr><td colspan="4" class="admin-table-empty">No shifts for this date.</td></tr>
-            </tbody>
-          </table>
+        <div class="tg-wrap">
+          <table class="tg-table" id="adminTgTable"><tbody><tr><td class="admin-table-empty">Loading…</td></tr></tbody></table>
+        </div>
+        <div class="tg-legend">
+          <span><i class="tg-dot" style="background:#fbdede;"></i>Pending / in progress</span>
+          <span><i class="tg-dot" style="background:#d7ecd4;"></i>Done</span>
+          <span><i class="tg-dot" style="background:#f3c9dc;"></i>Blocked</span>
+          <span id="adminTgSummary" style="margin-left:auto;"></span>
         </div>
       </div>
 
@@ -489,33 +493,15 @@
       </div>
 
       <div class="settings-panel" style="margin-top:20px;">
-        <h3>Shift settings</h3>
-        <p>Set the working shift length and how often annotators must check in. A per-annotator row overrides the global default. Annotators always start their own shift when they sign in; the mode is a cadence label.</p>
+        <h3>Grid hours</h3>
+        <p>The working hours prefilled as columns in the daily task grid, for every annotator.</p>
         <div class="settings-grid">
-          <div class="form-group">
-            <label>Annotator (blank = global default)</label>
-            <select id="shiftSetWorker"><option value="*">Global default</option></select>
-          </div>
-          <div class="form-group"><label>Shift hours</label><input type="number" id="shiftSetHours" min="1" max="24" step="0.5" value="15" /></div>
-          <div class="form-group"><label>Check-in interval (minutes)</label><input type="number" id="shiftSetInterval" min="15" max="240" step="5" value="90" /></div>
-          <div class="form-group">
-            <label>Assignment mode</label>
-            <select id="shiftSetMode">
-              <option value="auto">Auto (worker self-starts)</option>
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-            </select>
-          </div>
+          <div class="form-group"><label>Start hour (24h)</label><input type="number" id="gridStartHour" min="0" max="23" step="1" value="9" /></div>
+          <div class="form-group"><label>End hour (24h)</label><input type="number" id="gridEndHour" min="0" max="23" step="1" value="19" /></div>
         </div>
         <div class="settings-actions">
-          <button class="btn btn-primary" type="button" onclick="saveShiftSettingForm()">Save shift setting</button>
-          <span id="shiftSetStatus" style="font-size:13px;color:var(--text-muted);"></span>
-        </div>
-        <div class="admin-table-wrapper" style="margin-top:16px;">
-          <table class="admin-table">
-            <thead><tr><th>Annotator</th><th>Hours</th><th>Interval</th><th>Slots/shift</th><th>Mode</th><th>Action</th></tr></thead>
-            <tbody id="shiftSettingsBody"><tr><td colspan="6" class="admin-table-empty">No shift settings yet.</td></tr></tbody>
-          </table>
+          <button class="btn btn-primary" type="button" onclick="saveGridHoursForm()">Save grid hours</button>
+          <span id="gridHoursStatus" style="font-size:13px;color:var(--text-muted);"></span>
         </div>
       </div>
     </div>
@@ -1038,7 +1024,7 @@
 
   </div>
 
-  <script src="../js/supabase.js"></script>
+  <script src="../js/supabase.js?v=202609111258"></script>
   <script>
     // Small palette-compliant status icons reused inside the JS-generated table rows
     const ICON_CHECK_CIRCLE = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>';
@@ -2053,57 +2039,64 @@
       }, 13);
     }
 
+    function tgHourLabel(h) {
+      const period = h >= 12 ? 'PM' : 'AM';
+      let hour12 = h % 12; if (hour12 === 0) hour12 = 12;
+      return hour12 + ':00 ' + period;
+    }
+
+    async function loadDailyTaskGrid(date) {
+      const settings = await fetchDailyTaskGridSettings();
+      document.getElementById('gridStartHour').value = settings.start_hour;
+      document.getElementById('gridEndHour').value = settings.end_hour;
+      const hours = [];
+      for (let h = settings.start_hour; h <= settings.end_hour; h++) hours.push(h);
+
+      await ensureAdminDirectories();
+      const rows = await fetchDailyTasksAll(date);
+      const byWorker = {};
+      rows.forEach(r => { (byWorker[r.worker_email] = byWorker[r.worker_email] || {})[r.slot_hour] = r; });
+
+      const emails = (adminWorkerCache || []).map(w => (w.email || '').toLowerCase()).filter(Boolean);
+      Object.keys(byWorker).forEach(e => { if (!emails.includes(e)) emails.push(e); });
+      emails.sort();
+
+      const head = '<thead><tr><th>Annotator</th>' + hours.map(h => `<th>${tgHourLabel(h)}</th>`).join('') + '</tr></thead>';
+      let totalCells = 0, filledCells = 0, doneCells = 0, missingPlan = 0;
+      const body = '<tbody>' + (emails.length ? emails.map(email => {
+        const slots = byWorker[email] || {};
+        const hasAny = Object.keys(slots).length > 0;
+        if (!hasAny) missingPlan++;
+        const cells = hours.map(h => {
+          totalCells++;
+          const slot = slots[h];
+          const has = slot && slot.task_text;
+          if (has) { filledCells++; if (slot.status === 'done') doneCells++; }
+          const cls = has ? 'status-' + (slot.status || 'pending') : 'empty';
+          const title = has ? (slot.task_text + (slot.notes ? ' — ' + slot.notes : '')).replace(/"/g, '&quot;') : '';
+          return `<td class="tg-cell ${cls}" title="${title}">${has ? escapeHtml(slot.task_text) : ''}</td>`;
+        }).join('');
+        return `<tr class="${hasAny ? '' : 'tg-row-empty'}"><td>${escapeHtml(email)}${hasAny ? '' : ' <span style="color:var(--text-muted);font-weight:400;font-size:11px;">(no plan filed)</span>'}</td>${cells}</tr>`;
+      }).join('') : `<tr><td colspan="${hours.length + 1}" class="admin-table-empty">No annotators found.</td></tr>`) + '</tbody>';
+
+      document.getElementById('adminTgTable').innerHTML = head + body;
+      document.getElementById('adminTgSummary').textContent =
+        emails.length + ' annotator' + (emails.length === 1 ? '' : 's') + ' · ' + filledCells + '/' + totalCells + ' hours planned · ' + doneCells + ' done';
+
+      const badge = document.getElementById('reportsRedBadge');
+      if (missingPlan > 0) { badge.style.display = 'inline-block'; badge.textContent = missingPlan; }
+      else badge.style.display = 'none';
+    }
+
     async function loadReportsData() {
       const dateInput = document.getElementById('reportsDate');
       if (!dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
       const date = dateInput.value;
-      const [checkins, alerts] = await Promise.all([
-        fetchWorkerCheckinStatus({ date }),
-        fetchWorkerEmergencyAlerts()
-      ]);
 
       loadQuarterlyAppraisals();
+      await loadDailyTaskGrid(date);
 
-      const byWorker = {};
-      checkins.forEach(c => { (byWorker[c.worker_email] = byWorker[c.worker_email] || []).push(c); });
-      const workers = Object.keys(byWorker).sort();
-
-      let redCount = 0;
-      const rows = workers.map(email => {
-        const slots = byWorker[email].sort((a, b) => a.slot_index - b.slot_index);
-        redCount += slots.filter(s => s.flag === 'red').length;
-        const submitted = slots.filter(s => s.submitted_at).sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
-        const latest = submitted[0];
-        return `
-          <tr>
-            <td>${escapeHtml(email)}</td>
-            <td>${escapeHtml(formatTime(slots[0] && slots[0].shift_started_at))}</td>
-            <td>
-              <div class="checkin-slot-grid">
-                ${slots.map(s => `
-                  <div class="checkin-slot">
-                    ${flagChip(s.flag)}
-                    <small>#${s.slot_index} · due ${escapeHtml(formatTime(s.due_at))}${s.submitted_at ? '<br>sent ' + escapeHtml(formatTime(s.submitted_at)) : ''}</small>
-                  </div>`).join('')}
-              </div>
-            </td>
-            <td style="max-width:300px;">
-              ${latest ? `<div style="font-size:13px;">${escapeHtml(latest.update_text || '-')}</div>
-                 ${latest.owner_email ? `<div style="font-size:11px;color:var(--text-muted);">re: ${escapeHtml(latest.owner_email)}</div>` : ''}
-                 ${latest.items_completed != null ? `<div style="font-size:11px;color:var(--text-muted);">Items this block: ${escapeHtml(latest.items_completed)}</div>` : ''}
-                 ${latest.quality_issues ? `<div style="font-size:11px;color:#b45309;">Quality: ${escapeHtml(latest.quality_issues)}</div>` : ''}
-                 ${latest.guideline_questions ? `<div style="font-size:11px;color:#4338ca;">Guideline Q: ${escapeHtml(latest.guideline_questions)}</div>` : ''}
-                 ${latest.blockers ? `<div style="font-size:11px;color:#b91c1c;">Blocker: ${escapeHtml(latest.blockers)}</div>` : ''}`
-                : '<span style="color:var(--text-muted);font-size:12px;">No report yet</span>'}
-            </td>
-          </tr>`;
-      });
-      renderTableBody('reportsTableBody', rows.length ? rows : null, 'No shifts for this date.', r => r, 4);
-
-      const badge = document.getElementById('reportsRedBadge');
-      if (redCount > 0) { badge.style.display = 'inline-block'; badge.textContent = redCount; }
-      else badge.style.display = 'none';
-
+      const alerts = await fetchWorkerEmergencyAlerts();
       renderTableBody('reportsAlertsBody', alerts, 'No open alerts.', a => `
         <tr>
           <td>${escapeHtml(a.worker_email)}</td>
@@ -2112,49 +2105,17 @@
           <td>${escapeHtml(a.severity)}</td>
           <td>${escapeHtml(formatDate(a.created_at))}</td>
         </tr>`, 5);
-
-      loadShiftSettings();
     }
 
-    async function loadShiftSettings() {
-      await ensureAdminDirectories();
-      fillSelect('shiftSetWorker', adminWorkerCache, 'email', workerLabel, 'Global default');
-      const sel = document.getElementById('shiftSetWorker');
-      if (sel && !Array.from(sel.options).some(o => o.value === '*')) {
-        sel.insertAdjacentHTML('afterbegin', '<option value="*">Global default</option>');
-      }
-      const rows = await fetchWorkerShiftSettingsAll();
-      renderTableBody('shiftSettingsBody', rows, 'No shift settings yet.', r => {
-        const slots = Math.max(1, Math.min(48, Math.floor(Number(r.shift_hours) * 60 / Number(r.interval_minutes))));
-        return `
-        <tr>
-          <td>${r.worker_email === '*' ? 'Global default' : escapeHtml(r.worker_email)}</td>
-          <td>${escapeHtml(String(r.shift_hours))}</td>
-          <td>${escapeHtml(String(r.interval_minutes))} min</td>
-          <td>${slots}</td>
-          <td>${escapeHtml(r.assignment_mode)}</td>
-          <td>${r.worker_email === '*' ? '' : `<button class="admin-mini-btn danger" onclick="deleteShiftSettingRow('${escapeHtml(r.worker_email)}')">Delete</button>`}</td>
-        </tr>`;
-      }, 6);
-    }
-
-    async function saveShiftSettingForm() {
-      const status = document.getElementById('shiftSetStatus');
+    async function saveGridHoursForm() {
+      const status = document.getElementById('gridHoursStatus');
+      const start = Number(document.getElementById('gridStartHour').value);
+      const end = Number(document.getElementById('gridEndHour').value);
+      if (!(end >= start)) { status.textContent = 'End hour must be on or after start hour.'; return; }
       status.textContent = 'Saving…';
-      const res = await saveWorkerShiftSetting({
-        worker_email: document.getElementById('shiftSetWorker').value || '*',
-        shift_hours: document.getElementById('shiftSetHours').value,
-        interval_minutes: document.getElementById('shiftSetInterval').value,
-        assignment_mode: document.getElementById('shiftSetMode').value
-      });
-      status.textContent = res.ok ? 'Shift setting saved.' : ('Could not save: ' + errText(res.error));
-      if (res.ok) loadShiftSettings();
-    }
-
-    async function deleteShiftSettingRow(email) {
-      if (!confirm('Delete this override? The annotator will fall back to the global default.')) return;
-      if (await deleteWorkerShiftSetting(email)) loadShiftSettings();
-      else alert('Could not delete the shift setting.');
+      const ok = await saveDailyTaskGridSettings({ start_hour: start, end_hour: end });
+      status.textContent = ok ? 'Grid hours saved.' : 'Could not save.';
+      if (ok) loadReportsData();
     }
 
     setInterval(() => {

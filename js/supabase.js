@@ -693,6 +693,68 @@ async function submitWorkerCheckin(payload) {
   return { ok: response.ok, data: await response.json().catch(() => null) };
 }
 
+// ---- Daily Task Grid (backed by supabase/daily_task_grid.sql) ----
+// Replaces the 90-minute check-in flow above: at resumption each annotator
+// fills one cell per hour of the working day, then updates a cell's status as
+// they work it.
+async function fetchDailyTaskGridSettings() {
+  const rows = await fetchTableRows('daily_task_grid_settings', 'id=eq.1&limit=1');
+  return rows[0] || { start_hour: 9, end_hour: 19 };
+}
+
+async function saveDailyTaskGridSettings(data) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/daily_task_grid_settings?id=eq.1`, {
+    method: 'PATCH',
+    headers: { ...getAuthHeaders(), Prefer: 'return=minimal' },
+    body: JSON.stringify({
+      start_hour: Number(data.start_hour),
+      end_hour: Number(data.end_hour),
+      updated_by: (getSession().email || '').toLowerCase()
+    })
+  });
+  return response.ok;
+}
+
+// One worker's grid cells for one date.
+async function fetchWorkerDailyTasks(email, date) {
+  return fetchTableRows('worker_daily_tasks',
+    `worker_email=eq.${escapeQuery((email || '').toLowerCase())}&task_date=eq.${escapeQuery(date)}&order=slot_hour.asc`);
+}
+
+// Admin: every worker's grid cells for one date.
+async function fetchDailyTasksAll(date) {
+  return fetchTableRows('worker_daily_tasks', `task_date=eq.${escapeQuery(date)}&order=worker_email.asc,slot_hour.asc`);
+}
+
+// Upsert one grid cell (worker_email + task_date + slot_hour is the unique key).
+async function saveDailyTaskSlot(data) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/worker_daily_tasks?on_conflict=worker_email,task_date,slot_hour`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({
+      worker_email: (data.worker_email || '').toLowerCase(),
+      task_date: data.task_date,
+      slot_hour: Number(data.slot_hour),
+      owner_email: data.owner_email || null,
+      project_id: data.project_id || null,
+      task_id: data.task_id || null,
+      task_text: data.task_text || '',
+      status: data.status || 'pending',
+      notes: data.notes || null
+    })
+  });
+  return response.ok;
+}
+
+// Clears one grid cell entirely (used when a worker empties a slot's task text).
+async function deleteDailyTaskSlot(email, date, slotHour) {
+  const response = await fetch(
+    `${SUPABASE_URL}/rest/v1/worker_daily_tasks?worker_email=eq.${escapeQuery((email || '').toLowerCase())}&task_date=eq.${escapeQuery(date)}&slot_hour=eq.${Number(slotHour)}`,
+    { method: 'DELETE', headers: { ...getAuthHeaders(), Prefer: 'return=minimal' } }
+  );
+  return response.ok;
+}
+
 // ===== Weekly task values, payout splits, payments =====
 // Backed by supabase/task_value_splits.sql.
 
