@@ -306,9 +306,27 @@ async function provisionStarkAcProfile() {
 }
 
 async function initializeStarkAcPayment() {
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/starkac-monnify-payment`, { method: 'POST', headers: getAuthHeaders(), body: '{}' });
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/starkac-paystack-payment`, { method: 'POST', headers: getAuthHeaders(), body: '{}' });
   const data = await response.json();
   return { ok: response.ok && data.ok, data };
+}
+
+// ---- StarkAC plan pricing (USD only - the NGN charge is computed live,
+// inside the payment edge function, never stored or shown) ----
+async function fetchStarkAcPlanPricing() {
+  return fetchTableRows('starkac_plan_pricing', 'order=plan.asc');
+}
+
+async function saveStarkAcPlanPricing(plan, priceUsd) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/starkac_plan_pricing?plan=eq.${escapeQuery(plan)}`, {
+    method: 'PATCH',
+    headers: { ...getAuthHeaders(), Prefer: 'return=minimal' },
+    body: JSON.stringify({
+      price_usd: Number(priceUsd),
+      updated_by: (getSession().email || '').toLowerCase()
+    })
+  });
+  return response.ok;
 }
 
 async function signInWithGoogle(redirectPath = '/starkac/dashboard.html') {
@@ -319,6 +337,148 @@ async function signInWithGoogle(redirectPath = '/starkac/dashboard.html') {
 async function saveStarkAcActivity(data) {
   const response = await fetch(`${SUPABASE_URL}/rest/v1/starkac_trainee_activity`, {
     method: 'POST', headers: { ...getAuthHeaders(), Prefer: 'return=minimal' }, body: JSON.stringify(data)
+  });
+  return response.ok;
+}
+
+async function fetchStarkAcTraineesForPlan(plan) {
+  return fetchTableRows('starkac_trainees', `plan=eq.${escapeQuery(plan)}&order=full_name.asc`);
+}
+
+// ---- StarkAC trainers (admin-provisioned only) ----
+async function fetchStarkAcTrainers() {
+  return fetchTableRows('starkac_trainers', 'order=full_name.asc');
+}
+
+async function fetchStarkAcTrainerByEmail(email) {
+  const rows = await fetchTableRows('starkac_trainers', `email=eq.${escapeQuery((email || '').toLowerCase())}&limit=1`);
+  return rows[0] || null;
+}
+
+// Admin only - creates the trainer's login and public.starkac_trainers row.
+async function createStarkAcTrainer(email, fullName) {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/starkac-create-trainer`, {
+    method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ email, full_name: fullName })
+  });
+  const data = await response.json().catch(() => null);
+  return { ok: response.ok && data?.ok, data };
+}
+
+async function setStarkAcTrainerActive(email, active) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/starkac_trainers?email=eq.${escapeQuery((email || '').toLowerCase())}`, {
+    method: 'PATCH', headers: { ...getAuthHeaders(), Prefer: 'return=minimal' }, body: JSON.stringify({ active })
+  });
+  return response.ok;
+}
+
+// ---- StarkAC classes: one row per plan (live class link/schedule + trainer) ----
+async function fetchStarkAcClasses() {
+  return fetchTableRows('starkac_classes', 'order=plan.asc');
+}
+
+async function fetchStarkAcClass(plan) {
+  const rows = await fetchTableRows('starkac_classes', `plan=eq.${escapeQuery(plan)}&limit=1`);
+  return rows[0] || null;
+}
+
+async function saveStarkAcClass(plan, data) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/starkac_classes?plan=eq.${escapeQuery(plan)}`, {
+    method: 'PATCH', headers: { ...getAuthHeaders(), Prefer: 'return=minimal' }, body: JSON.stringify(data)
+  });
+  return response.ok;
+}
+
+// ---- StarkAC weekly videos ----
+async function fetchStarkAcWeeklyVideos(plan) {
+  return fetchTableRows('starkac_weekly_videos', `plan=eq.${escapeQuery(plan)}&order=week_number.asc`);
+}
+
+async function saveStarkAcWeeklyVideo(data) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/starkac_weekly_videos?on_conflict=plan,week_number`, {
+    method: 'POST', headers: { ...getAuthHeaders(), Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(data)
+  });
+  return response.ok;
+}
+
+async function deleteStarkAcWeeklyVideo(id) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/starkac_weekly_videos?id=eq.${escapeQuery(id)}`, {
+    method: 'DELETE', headers: { ...getAuthHeaders(), Prefer: 'return=minimal' }
+  });
+  return response.ok;
+}
+
+// ---- StarkAC assignments & submissions ----
+async function fetchStarkAcAssignments(plan) {
+  const query = plan ? `plan=eq.${escapeQuery(plan)}&order=due_date.asc.nullslast,created_at.desc` : 'order=due_date.asc.nullslast,created_at.desc';
+  return fetchTableRows('starkac_assignments', query);
+}
+
+async function saveStarkAcAssignment(data) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/starkac_assignments`, {
+    method: 'POST', headers: { ...getAuthHeaders(), Prefer: 'return=minimal' }, body: JSON.stringify(data)
+  });
+  return response.ok;
+}
+
+async function deleteStarkAcAssignment(id) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/starkac_assignments?id=eq.${escapeQuery(id)}`, {
+    method: 'DELETE', headers: { ...getAuthHeaders(), Prefer: 'return=minimal' }
+  });
+  return response.ok;
+}
+
+async function fetchStarkAcSubmissionsForAssignment(assignmentId) {
+  return fetchTableRows('starkac_assignment_submissions', `assignment_id=eq.${escapeQuery(assignmentId)}&order=submitted_at.desc`);
+}
+
+async function fetchStarkAcMySubmissions(email) {
+  return fetchTableRows('starkac_assignment_submissions', `trainee_email=eq.${escapeQuery((email || '').toLowerCase())}&order=submitted_at.desc`);
+}
+
+// Trainee-only: writes go through this RPC so a trainee can never set their
+// own score/feedback/status (see supabase/starkac_lms.sql).
+async function submitStarkAcAssignment(assignmentId, submissionText, submissionUrl) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/submit_starkac_assignment`, {
+    method: 'POST', headers: getAuthHeaders(),
+    body: JSON.stringify({ p_assignment_id: assignmentId, p_submission_text: submissionText || null, p_submission_url: submissionUrl || null })
+  });
+  return { ok: response.ok, data: await response.json().catch(() => null) };
+}
+
+// Trainer/admin only - enforced server-side by grade_starkac_submission().
+async function gradeStarkAcSubmission(submissionId, score, feedback, status) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/grade_starkac_submission`, {
+    method: 'POST', headers: getAuthHeaders(),
+    body: JSON.stringify({ p_submission_id: submissionId, p_score: score, p_feedback: feedback || null, p_status: status || 'reviewed' })
+  });
+  return { ok: response.ok, data: await response.json().catch(() => null) };
+}
+
+// ---- StarkAC community links (WhatsApp/Telegram/etc., admin-set) ----
+async function fetchStarkAcCommunityLinks(activeOnly = true) {
+  const query = activeOnly ? 'active=eq.true&order=sort_order.asc' : 'order=sort_order.asc';
+  return fetchTableRows('starkac_community_links', query);
+}
+
+async function saveStarkAcCommunityLink(data) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/starkac_community_links?on_conflict=id`, {
+    method: 'POST', headers: { ...getAuthHeaders(), Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(data)
+  });
+  return response.ok;
+}
+
+// Partial update (e.g. just toggling `active`) - saveStarkAcCommunityLink()
+// is an upsert and would fail NOT NULL on label/url if only sending one field.
+async function updateStarkAcCommunityLink(id, data) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/starkac_community_links?id=eq.${escapeQuery(id)}`, {
+    method: 'PATCH', headers: { ...getAuthHeaders(), Prefer: 'return=minimal' }, body: JSON.stringify(data)
+  });
+  return response.ok;
+}
+
+async function deleteStarkAcCommunityLink(id) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/starkac_community_links?id=eq.${escapeQuery(id)}`, {
+    method: 'DELETE', headers: { ...getAuthHeaders(), Prefer: 'return=minimal' }
   });
   return response.ok;
 }

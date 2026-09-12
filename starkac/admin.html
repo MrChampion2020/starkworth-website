@@ -1,4 +1,351 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>StarkAC Trainees</title><link rel="stylesheet" href="style.css"></head><body>
-<nav class="starkac-nav"><a class="starkac-brand" href="index.html">Stark<span>AC</span> staff</a><a href="../pages/admin.html">Main admin</a></nav><main class="starkac-shell"><section class="dashboard-header"><div><span class="eyebrow">Staff workspace</span><h1>StarkAC trainees</h1></div><span class="status-pill" id="staffStatus">Loading</span></section><section class="starkac-grid"><div class="dashboard-card"><h2>Add learner activity</h2><form id="activityForm"><div class="form-grid"><label>Trainee email<input type="email" name="trainee_email" required></label><label>Activity type<select name="activity_type"><option>lesson</option><option>assignment</option><option>assessment</option><option>mentor_note</option><option>status_update</option></select></label><label>Title<input name="title" required></label><label>Status<select name="status"><option>planned</option><option>in_progress</option><option>completed</option><option>review</option></select></label><label class="full">Description<textarea name="description" rows="3"></textarea></label></div><div class="form-actions"><button class="btn" type="submit">Save activity</button></div><p class="form-status" id="activityStatus"></p></form></div><div class="dashboard-card"><h2>Waiting list</h2><div id="traineeList" class="activity-list"></div></div></section></main><script src="../js/supabase.js"></script><script src="../js/main.js"></script><script>
-(async function(){const session=getSession();if(!session.accessToken){location.href='../pages/admin.html';return;}const rows=await fetchStarkAcTraineesAll();document.getElementById('staffStatus').textContent=`${rows.length} learners`;document.getElementById('traineeList').innerHTML=rows.length?rows.map(row=>`<div class="activity-row"><strong>${row.full_name}<br><small>${row.email}</small></strong><span>${row.status} · ${row.plan}</span></div>`).join(''):'<p>No learners yet.</p>';document.getElementById('activityForm').addEventListener('submit',async e=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.currentTarget));const status=document.getElementById('activityStatus');status.textContent=await saveStarkAcActivity(data)?'Activity saved.':'Could not save activity.';if(status.textContent==='Activity saved.')e.currentTarget.reset();});})().catch(()=>{document.getElementById('staffStatus').textContent='Unable to load trainees';});
-</script></body></html>
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>StarkAC Admin</title><meta name="robots" content="noindex, nofollow"><link rel="stylesheet" href="style.css"></head>
+<body>
+<nav class="starkac-nav"><a class="starkac-brand" href="index.html">Stark<span>AC</span> admin</a><a href="../pages/admin.html">Main admin</a></nav>
+<main class="starkac-shell">
+  <section class="dashboard-header"><div><span class="eyebrow">Admin workspace</span><h1>StarkAC control room</h1></div><span class="status-pill" id="staffStatus">Loading</span></section>
+
+  <div class="tab-row">
+    <button type="button" class="tab-btn active" data-tab="roster" onclick="showAdminTab('roster')">Roster</button>
+    <button type="button" class="tab-btn" data-tab="trainers" onclick="showAdminTab('trainers')">Trainers</button>
+    <button type="button" class="tab-btn" data-tab="classes" onclick="showAdminTab('classes')">Classes</button>
+    <button type="button" class="tab-btn" data-tab="content" onclick="showAdminTab('content')">Videos &amp; assignments</button>
+    <button type="button" class="tab-btn" data-tab="community" onclick="showAdminTab('community')">Community links</button>
+    <button type="button" class="tab-btn" data-tab="pricing" onclick="showAdminTab('pricing')">Pricing</button>
+    <button type="button" class="tab-btn" data-tab="payments" onclick="showAdminTab('payments')">Payments</button>
+  </div>
+
+  <!-- ROSTER -->
+  <section class="admin-tab" data-tab="roster">
+    <div class="dashboard-card">
+      <h2>Add learner activity</h2>
+      <form id="activityForm" class="inline-form">
+        <label>Trainee email<input type="email" name="trainee_email" required></label>
+        <label>Activity type<select name="activity_type"><option>lesson</option><option>assignment</option><option>assessment</option><option>mentor_note</option><option>status_update</option></select></label>
+        <label class="full">Title<input name="title" required></label>
+        <label>Status<select name="status"><option>planned</option><option>in_progress</option><option>completed</option><option>review</option></select></label>
+        <label>Score<input name="score" type="number" min="0" max="100" step="0.5"></label>
+        <label class="full">Description<textarea name="description" rows="2"></textarea></label>
+        <button class="btn" type="submit">Save activity</button>
+      </form>
+      <p class="form-status" id="activityStatus"></p>
+    </div>
+    <div class="dashboard-card" style="margin-top:16px;">
+      <h2>Trainee roster</h2>
+      <table class="mini-table">
+        <thead><tr><th>Name</th><th>Plan</th><th>Level</th><th>Status</th><th>Job track</th><th>Action</th></tr></thead>
+        <tbody id="traineeList"><tr><td colspan="6" class="row-meta">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- TRAINERS -->
+  <section class="admin-tab" data-tab="trainers" hidden>
+    <div class="dashboard-card">
+      <h2>Invite a trainer</h2>
+      <p class="row-meta">Trainers never self-register. This creates their login and sends an email invite to set a password.</p>
+      <form id="trainerForm" class="inline-form">
+        <label>Full name<input id="trFullName" type="text" required></label>
+        <label>Email<input id="trEmail" type="email" required></label>
+        <button class="btn" type="submit">Invite trainer</button>
+      </form>
+      <p class="form-status" id="trainerFormStatus"></p>
+    </div>
+    <div class="dashboard-card" style="margin-top:16px;">
+      <h2>All trainers</h2>
+      <table class="mini-table">
+        <thead><tr><th>Name</th><th>Email</th><th>Assigned plan(s)</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody id="trainerListBody"><tr><td colspan="5" class="row-meta">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- CLASSES -->
+  <section class="admin-tab" data-tab="classes" hidden>
+    <div class="dashboard-card">
+      <h2>Assign trainers to plans</h2>
+      <div id="classAssignList"></div>
+    </div>
+  </section>
+
+  <!-- CONTENT -->
+  <section class="admin-tab" data-tab="content" hidden>
+    <div class="dashboard-card">
+      <h2>Weekly videos &amp; assignments</h2>
+      <div class="tab-row" id="contentPlanTabs">
+        <button type="button" class="tab-btn active" onclick="switchContentPlan('beginner_20')">Beginner</button>
+        <button type="button" class="tab-btn" onclick="switchContentPlan('intermediate_35')">Intermediate</button>
+        <button type="button" class="tab-btn" onclick="switchContentPlan('senior_50')">Senior</button>
+      </div>
+      <h3>Weekly videos</h3>
+      <form id="videoForm" class="inline-form">
+        <label>Week #<input id="vidWeek" type="number" min="1" required style="max-width:100px;"></label>
+        <label class="full">Title<input id="vidTitle" type="text" required></label>
+        <label class="full">Video URL<input id="vidUrl" type="url" required></label>
+        <button class="btn" type="submit">Post</button>
+      </form>
+      <div id="videoList" class="activity-list" style="margin-top:12px;"></div>
+      <h3 style="margin-top:24px;">Assignments</h3>
+      <form id="assignmentForm" class="inline-form">
+        <label class="full">Title<input id="asgTitle" type="text" required></label>
+        <label class="full">Instructions<input id="asgInstructions" type="text"></label>
+        <label>Due date<input id="asgDue" type="date"></label>
+        <button class="btn" type="submit">Create</button>
+      </form>
+      <div id="assignmentList" style="margin-top:12px;"></div>
+    </div>
+  </section>
+
+  <!-- COMMUNITY -->
+  <section class="admin-tab" data-tab="community" hidden>
+    <div class="dashboard-card">
+      <h2>Community links</h2>
+      <p class="row-meta">Shown to every trainee on their dashboard.</p>
+      <form id="communityForm" class="inline-form">
+        <label>Key (e.g. whatsapp)<input id="comId" type="text" required></label>
+        <label>Label<input id="comLabel" type="text" required></label>
+        <label class="full">URL<input id="comUrl" type="url" required></label>
+        <label>Order<input id="comOrder" type="number" value="0" style="max-width:80px;"></label>
+        <button class="btn" type="submit">Save link</button>
+      </form>
+      <div id="communityListAdmin" style="margin-top:16px;"></div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section class="admin-tab" data-tab="pricing" hidden>
+    <div class="dashboard-card">
+      <h2>Plan pricing</h2>
+      <p class="row-meta">USD is the only price you set. Trainees whose country is Nigeria are charged the Naira equivalent automatically by Paystack at checkout, converted from this USD price at the live exchange rate — no Naira value is ever stored or shown here.</p>
+      <table class="mini-table">
+        <thead><tr><th>Plan</th><th>USD</th><th></th></tr></thead>
+        <tbody id="pricingBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- PAYMENTS -->
+  <section class="admin-tab" data-tab="payments" hidden>
+    <div class="dashboard-card">
+      <h2>Payments</h2>
+      <table class="mini-table">
+        <thead><tr><th>Trainee</th><th>Reference</th><th>Currency</th><th>Amount</th><th>Status</th><th>Channel</th><th>Date</th></tr></thead>
+        <tbody id="paymentsBody"><tr><td colspan="7" class="row-meta">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+<script src="../js/supabase.js"></script><script src="../js/main.js"></script>
+<script>
+  const PLAN_LABELS = { beginner_20: 'Beginner', intermediate_35: 'Intermediate', senior_50: 'Senior' };
+  let contentPlan = 'beginner_20';
+  let trainerCache = [];
+
+  function escapeHtml(v) { const d = document.createElement('div'); d.textContent = v == null ? '' : String(v); return d.innerHTML; }
+  function badge(text, cls) { return `<span class="badge ${cls || ''}">${escapeHtml((text || '').replace(/_/g, ' '))}</span>`; }
+
+  function showAdminTab(name) {
+    document.querySelectorAll('.admin-tab').forEach(el => el.hidden = el.dataset.tab !== name);
+    document.querySelectorAll('.tab-row > .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+    if (name === 'trainers') loadTrainers();
+    if (name === 'classes') loadClassAssignments();
+    if (name === 'content') loadContent();
+    if (name === 'community') loadCommunityAdmin();
+    if (name === 'pricing') loadPricing();
+    if (name === 'payments') loadPayments();
+  }
+
+  async function loadRoster() {
+    const rows = await fetchStarkAcTraineesAll();
+    document.getElementById('staffStatus').textContent = `${rows.length} learners`;
+    document.getElementById('traineeList').innerHTML = rows.length ? rows.map(row => `
+      <tr>
+        <td>${escapeHtml(row.full_name)}<br><span class="row-meta">${escapeHtml(row.email)}</span></td>
+        <td><span class="plan-tag">${escapeHtml(PLAN_LABELS[row.plan] || row.plan)}</span></td>
+        <td>${escapeHtml((row.current_level || '').replace('_', ' '))}</td>
+        <td>${badge(row.status, row.status)}</td>
+        <td>${row.job_track_eligible ? '✓' : '—'}</td>
+        <td><button class="btn secondary" onclick="toggleJobTrack('${escapeHtml(row.email)}', ${!row.job_track_eligible})">${row.job_track_eligible ? 'Revoke' : 'Grant'} job track</button></td>
+      </tr>`).join('') : '<tr><td colspan="6" class="row-meta">No learners yet.</td></tr>';
+  }
+
+  window.toggleJobTrack = async function (email, value) {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/starkac_trainees?email=eq.${encodeURIComponent(email)}`, {
+      method: 'PATCH', headers: { ...getAuthHeaders(), Prefer: 'return=minimal' }, body: JSON.stringify({ job_track_eligible: value })
+    });
+    if (response.ok) loadRoster(); else alert('Could not update.');
+  };
+
+  document.getElementById('activityForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.currentTarget));
+    if (data.score === '') delete data.score; else data.score = Number(data.score);
+    const status = document.getElementById('activityStatus');
+    status.textContent = await saveStarkAcActivity(data) ? 'Activity saved.' : 'Could not save activity.';
+    if (status.textContent === 'Activity saved.') e.currentTarget.reset();
+  });
+
+  // ---- Trainers ----
+  async function loadTrainers() {
+    const [trainers, classes] = await Promise.all([fetchStarkAcTrainers(), fetchStarkAcClasses()]);
+    trainerCache = trainers;
+    const plansByTrainer = {};
+    classes.forEach(c => { if (c.trainer_email) (plansByTrainer[c.trainer_email.toLowerCase()] = plansByTrainer[c.trainer_email.toLowerCase()] || []).push(PLAN_LABELS[c.plan] || c.plan); });
+    document.getElementById('trainerListBody').innerHTML = trainers.length ? trainers.map(t => `
+      <tr>
+        <td>${escapeHtml(t.full_name)}</td>
+        <td>${escapeHtml(t.email)}</td>
+        <td>${(plansByTrainer[t.email.toLowerCase()] || []).join(', ') || '<span class="row-meta">Unassigned</span>'}</td>
+        <td>${badge(t.active ? 'active' : 'inactive', t.active ? 'done' : 'blocked')}</td>
+        <td><button class="btn secondary" onclick="toggleTrainer('${escapeHtml(t.email)}', ${!t.active})">${t.active ? 'Deactivate' : 'Reactivate'}</button></td>
+      </tr>`).join('') : '<tr><td colspan="5" class="row-meta">No trainers yet.</td></tr>';
+  }
+
+  window.toggleTrainer = async function (email, active) {
+    if (await setStarkAcTrainerActive(email, active)) loadTrainers(); else alert('Could not update trainer.');
+  };
+
+  document.getElementById('trainerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const status = document.getElementById('trainerFormStatus');
+    status.textContent = 'Inviting…';
+    const result = await createStarkAcTrainer(document.getElementById('trEmail').value.trim(), document.getElementById('trFullName').value.trim());
+    status.textContent = result.ok ? (result.data.invited ? 'Invite sent.' : 'Trainer access granted to an existing account.') : (result.data?.error || 'Could not create trainer.');
+    if (result.ok) { e.currentTarget.reset(); loadTrainers(); }
+  });
+
+  // ---- Classes ----
+  async function loadClassAssignments() {
+    const [classes, trainers] = await Promise.all([fetchStarkAcClasses(), fetchStarkAcTrainers()]);
+    const activeTrainers = trainers.filter(t => t.active);
+    document.getElementById('classAssignList').innerHTML = classes.map(c => `
+      <div class="video-row">
+        <div><span class="row-title">${escapeHtml(PLAN_LABELS[c.plan] || c.plan)}</span>${c.live_class_schedule ? `<div class="row-meta">${escapeHtml(c.live_class_schedule)}</div>` : ''}</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select id="class-trainer-${c.plan}">
+            <option value="">Unassigned</option>
+            ${activeTrainers.map(t => `<option value="${escapeHtml(t.email)}" ${t.email === c.trainer_email ? 'selected' : ''}>${escapeHtml(t.full_name)}</option>`).join('')}
+          </select>
+          <button class="btn secondary" onclick="assignTrainer('${c.plan}')">Save</button>
+        </div>
+      </div>`).join('');
+  }
+
+  window.assignTrainer = async function (plan) {
+    const email = document.getElementById('class-trainer-' + plan).value || null;
+    if (await saveStarkAcClass(plan, { trainer_email: email })) loadClassAssignments(); else alert('Could not assign trainer.');
+  };
+
+  // ---- Content (videos + assignments), admin can post for any plan ----
+  window.switchContentPlan = function (plan) {
+    contentPlan = plan;
+    document.querySelectorAll('#contentPlanTabs .tab-btn').forEach((b, i) => b.classList.toggle('active', ['beginner_20', 'intermediate_35', 'senior_50'][i] === plan));
+    loadContent();
+  };
+
+  async function loadContent() {
+    const [videos, assignments] = await Promise.all([fetchStarkAcWeeklyVideos(contentPlan), fetchStarkAcAssignments(contentPlan)]);
+    document.getElementById('videoList').innerHTML = videos.length
+      ? videos.map(v => `<div class="video-row"><span class="row-title">Week ${escapeHtml(v.week_number)}: ${escapeHtml(v.title)}</span><button class="btn secondary" onclick="removeVideo('${v.id}')">Delete</button></div>`).join('')
+      : '<p class="row-meta">No videos yet.</p>';
+    document.getElementById('assignmentList').innerHTML = assignments.length
+      ? assignments.map(a => `<div class="assignment-row"><div><span class="row-title">${escapeHtml(a.title)}</span>${a.due_date ? `<div class="row-meta">Due ${escapeHtml(a.due_date)}</div>` : ''}</div><button class="btn secondary" onclick="removeAssignment('${a.id}')">Delete</button></div>`).join('')
+      : '<p class="row-meta">No assignments yet.</p>';
+  }
+
+  window.removeVideo = async function (id) { if (await deleteStarkAcWeeklyVideo(id)) loadContent(); };
+  window.removeAssignment = async function (id) { if (confirm('Delete this assignment?') && await deleteStarkAcAssignment(id)) loadContent(); };
+
+  document.getElementById('videoForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const ok = await saveStarkAcWeeklyVideo({
+      plan: contentPlan,
+      week_number: Number(document.getElementById('vidWeek').value),
+      title: document.getElementById('vidTitle').value.trim(),
+      video_url: document.getElementById('vidUrl').value.trim(),
+      posted_by: (getSession().email || '').toLowerCase()
+    });
+    if (ok) { e.currentTarget.reset(); loadContent(); } else alert('Could not save video.');
+  });
+
+  document.getElementById('assignmentForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const ok = await saveStarkAcAssignment({
+      plan: contentPlan,
+      title: document.getElementById('asgTitle').value.trim(),
+      instructions: document.getElementById('asgInstructions').value.trim() || null,
+      due_date: document.getElementById('asgDue').value || null,
+      created_by: (getSession().email || '').toLowerCase()
+    });
+    if (ok) { e.currentTarget.reset(); loadContent(); } else alert('Could not save assignment.');
+  });
+
+  // ---- Community links ----
+  async function loadCommunityAdmin() {
+    const links = await fetchStarkAcCommunityLinks(false);
+    document.getElementById('communityListAdmin').innerHTML = links.length
+      ? links.map(l => `<div class="video-row"><div><span class="row-title">${escapeHtml(l.label)}</span><div class="row-meta">${escapeHtml(l.url)}</div></div><div style="display:flex;gap:8px;"><button class="btn secondary" onclick="toggleCommunityLink('${escapeHtml(l.id)}', ${!l.active})">${l.active ? 'Hide' : 'Show'}</button><button class="btn secondary" onclick="removeCommunityLink('${escapeHtml(l.id)}')">Delete</button></div></div>`).join('')
+      : '<p class="row-meta">No community links yet.</p>';
+  }
+
+  window.toggleCommunityLink = async function (id, active) {
+    if (await updateStarkAcCommunityLink(id, { active })) loadCommunityAdmin();
+  };
+  window.removeCommunityLink = async function (id) {
+    if (confirm('Delete this link?') && await deleteStarkAcCommunityLink(id)) loadCommunityAdmin();
+  };
+
+  document.getElementById('communityForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const ok = await saveStarkAcCommunityLink({
+      id: document.getElementById('comId').value.trim().toLowerCase().replace(/\s+/g, '-'),
+      label: document.getElementById('comLabel').value.trim(),
+      url: document.getElementById('comUrl').value.trim(),
+      sort_order: Number(document.getElementById('comOrder').value) || 0,
+      active: true
+    });
+    if (ok) { e.currentTarget.reset(); loadCommunityAdmin(); } else alert('Could not save link.');
+  });
+
+  // ---- Pricing ----
+  async function loadPricing() {
+    const rows = await fetchStarkAcPlanPricing();
+    document.getElementById('pricingBody').innerHTML = rows.map(r => `
+      <tr>
+        <td>${escapeHtml(PLAN_LABELS[r.plan] || r.plan)}</td>
+        <td><input type="number" step="0.01" id="price-usd-${r.plan}" value="${escapeHtml(r.price_usd)}" style="max-width:100px;"></td>
+        <td><button class="btn secondary" onclick="savePricing('${r.plan}')">Save</button></td>
+      </tr>`).join('');
+  }
+
+  window.savePricing = async function (plan) {
+    const usd = document.getElementById('price-usd-' + plan).value;
+    if (await saveStarkAcPlanPricing(plan, usd)) alert('Saved.'); else alert('Could not save pricing.');
+  };
+
+  // ---- Payments ----
+  async function loadPayments() {
+    const rows = await fetchTableRows('starkac_payments', 'order=created_at.desc&limit=200');
+    document.getElementById('paymentsBody').innerHTML = rows.length ? rows.map(p => `
+      <tr>
+        <td>${escapeHtml(p.trainee_email)}</td>
+        <td>${escapeHtml(p.payment_reference)}</td>
+        <td>${escapeHtml(p.currency || 'USD')}</td>
+        <td>${escapeHtml(p.amount_charged ?? p.amount_usd)}</td>
+        <td>${badge(p.status, p.status === 'paid' ? 'paid' : p.status === 'failed' ? 'failed' : 'pending')}</td>
+        <td>${escapeHtml(p.channel || '-')}</td>
+        <td>${escapeHtml(new Date(p.created_at).toLocaleDateString())}</td>
+      </tr>`).join('') : '<tr><td colspan="7" class="row-meta">No payments yet.</td></tr>';
+  }
+
+  (async function () {
+    const session = getSession();
+    if (!session.accessToken) { location.href = '../pages/admin.html'; return; }
+    const isAdmin = await fetch(`${SUPABASE_URL}/rest/v1/rpc/is_starkworth_admin`, { method: 'POST', headers: getAuthHeaders(), body: '{}' }).then(r => r.json()).catch(() => false);
+    if (!isAdmin) { document.getElementById('staffStatus').textContent = 'Admin access required'; document.querySelectorAll('.admin-tab, .tab-row').forEach(el => el.remove()); return; }
+    await loadRoster();
+  })().catch(() => { document.getElementById('staffStatus').textContent = 'Unable to load trainees'; });
+</script>
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>StarkAC Trainer Dashboard</title><meta name="robots" content="noindex, nofollow"><link rel="stylesheet" href="style.css"></head>
+<body>
+  <nav class="starkac-nav"><a class="starkac-brand" href="index.html">Stark<span>AC</span> trainer</a><button class="btn secondary" id="logout">Log out</button></nav>
+  <main class="starkac-shell">
+    <section class="dashboard-header"><div><span class="eyebrow">Trainer workspace</span><h1 id="trainerName">Your classes</h1></div><span class="status-pill" id="trainerPlanCount">Loading</span></section>
+
+    <div class="tab-row" id="planTabs"></div>
+
+    <section class="dashboard-card" id="classCard">
+      <span class="eyebrow">Live class</span><h2>Class link &amp; schedule</h2>
+      <form id="classForm" class="inline-form">
+        <label class="full">Live class link<input id="clsLink" type="url" placeholder="https://zoom.us/..."></label>
+        <label class="full">Schedule<input id="clsSchedule" type="text" placeholder="e.g. Mon &amp; Wed, 6PM WAT"></label>
+        <button class="btn" type="submit">Save</button>
+        <span class="form-status" id="clsStatus"></span>
+      </form>
+    </section>
+
+    <section class="dashboard-card">
+      <span class="eyebrow">Weekly videos</span><h2>Post a lesson recording</h2>
+      <form id="videoForm" class="inline-form">
+        <label>Week #<input id="vidWeek" type="number" min="1" required style="max-width:100px;"></label>
+        <label class="full">Title<input id="vidTitle" type="text" required></label>
+        <label class="full">Video URL<input id="vidUrl" type="url" required placeholder="https://youtube.com/..."></label>
+        <label class="full">Notes<input id="vidNotes" type="text"></label>
+        <button class="btn" type="submit">Post video</button>
+        <span class="form-status" id="vidStatus"></span>
+      </form>
+      <div id="videoList" class="activity-list" style="margin-top:16px;"></div>
+    </section>
+
+    <section class="dashboard-card">
+      <span class="eyebrow">Assignments</span><h2>Assignments &amp; grading</h2>
+      <form id="assignmentForm" class="inline-form">
+        <label class="full">Title<input id="asgTitle" type="text" required></label>
+        <label class="full">Instructions<input id="asgInstructions" type="text"></label>
+        <label>Due date<input id="asgDue" type="date"></label>
+        <button class="btn" type="submit">Create assignment</button>
+        <span class="form-status" id="asgStatus"></span>
+      </form>
+      <div id="assignmentList" style="margin-top:16px;"></div>
+    </section>
+
+    <section class="dashboard-card">
+      <span class="eyebrow">Roster</span><h2>Trainees &amp; assessments</h2>
+      <div class="stat-mini" id="rosterStats" style="margin-bottom:16px;"></div>
+      <form id="assessmentForm" class="inline-form">
+        <label>Trainee<select id="assTrainee" required></select></label>
+        <label>Type<select id="assType"><option value="assessment">Assessment</option><option value="lesson">Lesson</option><option value="mentor_note">Mentor note</option><option value="status_update">Status update</option></select></label>
+        <label class="full">Title<input id="assTitle" type="text" required></label>
+        <label>Score (0-100)<input id="assScore" type="number" min="0" max="100" step="0.5"></label>
+        <label>Status<select id="assStatus"><option value="completed">Completed</option><option value="in_progress">In progress</option><option value="review">Review</option><option value="planned">Planned</option></select></label>
+        <label class="full">Notes<input id="assNotes" type="text"></label>
+        <button class="btn" type="submit">Add</button>
+        <span class="form-status" id="assFormStatus"></span>
+      </form>
+      <table class="mini-table" style="margin-top:16px;">
+        <thead><tr><th>Trainee</th><th>Level</th><th>Status</th><th>Job track</th></tr></thead>
+        <tbody id="rosterBody"></tbody>
+      </table>
+    </section>
+  </main>
+  <footer class="starkac-footer">Trainer access is scoped to your assigned plan(s) only.</footer>
+  <script src="../js/supabase.js"></script><script src="../js/main.js"></script>
+  <script>
+    let currentPlan = null;
+    let myPlans = [];
+    let roster = [];
+    const PLAN_LABELS = { beginner_20: 'Beginner', intermediate_35: 'Intermediate', senior_50: 'Senior' };
+
+    function escapeHtml(v) { const d = document.createElement('div'); d.textContent = v == null ? '' : String(v); return d.innerHTML; }
+    function badge(text, cls) { return `<span class="badge ${cls || ''}">${escapeHtml((text || '').replace(/_/g, ' '))}</span>`; }
+
+    function renderTabs() {
+      const wrap = document.getElementById('planTabs');
+      wrap.innerHTML = myPlans.map(p => `<button type="button" class="tab-btn ${p === currentPlan ? 'active' : ''}" onclick="switchPlan('${p}')">${PLAN_LABELS[p] || p}</button>`).join('');
+      document.getElementById('trainerPlanCount').textContent = myPlans.length + ' plan' + (myPlans.length === 1 ? '' : 's');
+    }
+
+    window.switchPlan = async function (plan) {
+      currentPlan = plan;
+      renderTabs();
+      await loadClass();
+      await loadVideos();
+      await loadAssignments();
+      await loadRoster();
+    };
+
+    async function loadClass() {
+      const cls = await fetchStarkAcClass(currentPlan).catch(() => null);
+      document.getElementById('clsLink').value = (cls && cls.live_class_link) || '';
+      document.getElementById('clsSchedule').value = (cls && cls.live_class_schedule) || '';
+    }
+
+    document.getElementById('classForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const status = document.getElementById('clsStatus');
+      status.textContent = 'Saving…';
+      const ok = await saveStarkAcClass(currentPlan, {
+        live_class_link: document.getElementById('clsLink').value.trim() || null,
+        live_class_schedule: document.getElementById('clsSchedule').value.trim() || null
+      });
+      status.textContent = ok ? 'Saved.' : 'Could not save.';
+    });
+
+    async function loadVideos() {
+      const videos = await fetchStarkAcWeeklyVideos(currentPlan).catch(() => []);
+      document.getElementById('videoList').innerHTML = videos.length
+        ? videos.map(v => `<div class="video-row"><div><span class="row-title">Week ${escapeHtml(v.week_number)}: ${escapeHtml(v.title)}</span>${v.notes ? `<div class="row-meta">${escapeHtml(v.notes)}</div>` : ''}</div><div><a class="btn secondary" href="${escapeHtml(v.video_url)}" target="_blank" rel="noopener">Open</a> <button class="btn secondary" onclick="removeVideo('${v.id}')">Delete</button></div></div>`).join('')
+        : '<p class="row-meta">No videos posted yet.</p>';
+    }
+
+    window.removeVideo = async function (id) {
+      if (!confirm('Delete this video?')) return;
+      if (await deleteStarkAcWeeklyVideo(id)) loadVideos();
+    };
+
+    document.getElementById('videoForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const status = document.getElementById('vidStatus');
+      status.textContent = 'Saving…';
+      const ok = await saveStarkAcWeeklyVideo({
+        plan: currentPlan,
+        week_number: Number(document.getElementById('vidWeek').value),
+        title: document.getElementById('vidTitle').value.trim(),
+        video_url: document.getElementById('vidUrl').value.trim(),
+        notes: document.getElementById('vidNotes').value.trim() || null,
+        posted_by: (getSession().email || '').toLowerCase()
+      });
+      status.textContent = ok ? 'Posted.' : 'Could not save.';
+      if (ok) { e.currentTarget.reset(); loadVideos(); }
+    });
+
+    async function loadAssignments() {
+      const assignments = await fetchStarkAcAssignments(currentPlan).catch(() => []);
+      const wrap = document.getElementById('assignmentList');
+      if (!assignments.length) { wrap.innerHTML = '<p class="row-meta">No assignments yet.</p>'; return; }
+      const blocks = await Promise.all(assignments.map(async (a) => {
+        const subs = await fetchStarkAcSubmissionsForAssignment(a.id).catch(() => []);
+        const subRows = subs.map(s => `<div class="submission-row">
+          <div><span class="row-title">${escapeHtml(s.trainee_email)}</span> ${badge(s.status, s.status)}${s.score != null ? ` <strong>${escapeHtml(s.score)}/100</strong>` : ''}
+            ${s.submission_text ? `<p class="row-meta">${escapeHtml(s.submission_text)}</p>` : ''}
+            ${s.submission_url ? `<p class="row-meta"><a href="${escapeHtml(s.submission_url)}" target="_blank" rel="noopener">${escapeHtml(s.submission_url)}</a></p>` : ''}</div>
+          ${s.status === 'reviewed' ? '' : `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input type="number" min="0" max="100" step="0.5" placeholder="Score" id="grade-score-${s.id}" style="max-width:90px;">
+            <input type="text" placeholder="Feedback" id="grade-feedback-${s.id}" style="max-width:180px;">
+            <button class="btn secondary" onclick="gradeSubmission('${s.id}')">Grade</button>
+          </div>`}
+        </div>`).join('');
+        return `<div class="assignment-row" style="display:block;">
+          <span class="row-title">${escapeHtml(a.title)}</span> ${a.due_date ? `<span class="row-meta">Due ${escapeHtml(a.due_date)}</span>` : ''}
+          <button class="btn secondary" style="float:right;" onclick="removeAssignment('${a.id}')">Delete</button>
+          ${a.instructions ? `<p class="row-meta">${escapeHtml(a.instructions)}</p>` : ''}
+          <div style="margin-top:10px;">${subRows || '<p class="row-meta">No submissions yet.</p>'}</div>
+        </div>`;
+      }));
+      wrap.innerHTML = blocks.join('');
+    }
+
+    window.removeAssignment = async function (id) {
+      if (!confirm('Delete this assignment and its submissions?')) return;
+      if (await deleteStarkAcAssignment(id)) loadAssignments();
+    };
+
+    window.gradeSubmission = async function (submissionId) {
+      const score = document.getElementById('grade-score-' + submissionId).value;
+      const feedback = document.getElementById('grade-feedback-' + submissionId).value.trim();
+      const result = await gradeStarkAcSubmission(submissionId, score === '' ? null : Number(score), feedback, 'reviewed');
+      if (result.ok) loadAssignments();
+      else alert(result.data?.message || 'Could not grade submission.');
+    };
+
+    document.getElementById('assignmentForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const status = document.getElementById('asgStatus');
+      status.textContent = 'Saving…';
+      const ok = await saveStarkAcAssignment({
+        plan: currentPlan,
+        title: document.getElementById('asgTitle').value.trim(),
+        instructions: document.getElementById('asgInstructions').value.trim() || null,
+        due_date: document.getElementById('asgDue').value || null,
+        created_by: (getSession().email || '').toLowerCase()
+      });
+      status.textContent = ok ? 'Created.' : 'Could not save.';
+      if (ok) { e.currentTarget.reset(); loadAssignments(); }
+    });
+
+    async function loadRoster() {
+      roster = await fetchStarkAcTraineesForPlan(currentPlan).catch(() => []);
+      document.getElementById('rosterStats').innerHTML = `
+        <div><strong>${roster.length}</strong><span>Trainees</span></div>
+        <div><strong>${roster.filter(r => r.status === 'onboarded').length}</strong><span>Onboarded</span></div>
+        <div><strong>${roster.filter(r => r.job_track_eligible).length}</strong><span>Job-track ready</span></div>`;
+      document.getElementById('rosterBody').innerHTML = roster.length
+        ? roster.map(r => `<tr><td>${escapeHtml(r.full_name)}<br><span class="row-meta">${escapeHtml(r.email)}</span></td><td>${escapeHtml((r.current_level || '').replace('_', ' '))}</td><td>${badge(r.status, r.status)}</td><td>${r.job_track_eligible ? '✓' : '—'}</td></tr>`).join('')
+        : '<tr><td colspan="4" class="row-meta">No trainees on this plan yet.</td></tr>';
+      const select = document.getElementById('assTrainee');
+      select.innerHTML = roster.map(r => `<option value="${escapeHtml(r.email)}">${escapeHtml(r.full_name)} (${escapeHtml(r.email)})</option>`).join('') || '<option value="">No trainees</option>';
+    }
+
+    document.getElementById('assessmentForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const status = document.getElementById('assFormStatus');
+      const email = document.getElementById('assTrainee').value;
+      if (!email) { status.textContent = 'No trainee selected.'; return; }
+      status.textContent = 'Saving…';
+      const ok = await saveStarkAcActivity({
+        trainee_email: email,
+        activity_type: document.getElementById('assType').value,
+        title: document.getElementById('assTitle').value.trim(),
+        description: document.getElementById('assNotes').value.trim() || null,
+        status: document.getElementById('assStatus').value,
+        score: document.getElementById('assScore').value === '' ? null : Number(document.getElementById('assScore').value)
+      });
+      status.textContent = ok ? 'Saved.' : 'Could not save.';
+      if (ok) e.currentTarget.reset();
+    });
+
+    (async function () {
+      await ensureFreshSession();
+      const session = getSession();
+      if (!session.email || !session.accessToken || getSessionPortalType() !== 'starkac_trainer') { location.href = 'trainer-login.html'; return; }
+      const trainer = await fetchStarkAcTrainerByEmail(session.email);
+      if (!trainer || !trainer.active) { signOut(); location.href = 'trainer-login.html'; return; }
+      document.getElementById('trainerName').textContent = trainer.full_name;
+
+      const classes = await fetchStarkAcClasses();
+      myPlans = classes.filter(c => (c.trainer_email || '').toLowerCase() === session.email.toLowerCase()).map(c => c.plan);
+      if (!myPlans.length) {
+        document.getElementById('trainerPlanCount').textContent = 'No plan assigned';
+        document.getElementById('planTabs').outerHTML = '<p class="row-meta">You have not been assigned to a plan yet. Contact a StarkAC admin.</p>';
+        document.querySelectorAll('main > section.dashboard-card').forEach(el => el.remove());
+        return;
+      }
+      await switchPlan(myPlans[0]);
+
+      document.getElementById('logout').addEventListener('click', () => { signOut(); location.href = 'trainer-login.html'; });
+    })().catch(() => { location.href = 'trainer-login.html'; });
+  </script>
+</body>
+</html>

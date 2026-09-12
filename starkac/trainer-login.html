@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>StarkAC Trainer Sign In</title><meta name="robots" content="noindex, nofollow"><link rel="stylesheet" href="style.css"></head>
+<body>
+  <nav class="starkac-nav"><a class="starkac-brand" href="index.html">Stark<span>AC</span></a><a href="index.html">Student portal</a></nav>
+  <main class="starkac-shell" style="max-width:520px;">
+    <section class="form-card">
+      <span class="eyebrow">Trainer workspace</span><h2>Trainer sign in</h2>
+      <p class="lede" style="font-size:15px;">Trainer accounts are created by a StarkAC admin. If you were invited, check your email for a link to set your password first.</p>
+      <form id="loginForm">
+        <div class="form-grid">
+          <label class="full">Email<input name="email" type="email" required></label>
+          <label class="full">Password<input name="password" type="password" required></label>
+        </div>
+        <div class="form-actions"><button class="btn" type="submit">Open trainer dashboard</button></div>
+        <p id="loginStatus" class="form-status" role="status"></p>
+      </form>
+    </section>
+  </main>
+  <footer class="starkac-footer">StarkAC trainer access is provisioned only by a StarkAC admin.</footer>
+  <script src="../js/supabase.js"></script><script src="../js/main.js"></script>
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(event.currentTarget));
+      const status = document.getElementById('loginStatus');
+      status.textContent = 'Signing in...';
+      const result = await signInWithPassword(data.email.toLowerCase(), data.password);
+      if (!result.ok) { status.textContent = result.data?.msg || result.data?.error_description || 'Invalid login.'; return; }
+      const trainer = await fetchStarkAcTrainerByEmail(data.email);
+      if (!trainer || !trainer.active) {
+        status.textContent = 'This login is not registered as an active StarkAC trainer.';
+        signOut();
+        return;
+      }
+      setSessionPortalType('starkac_trainer');
+      sessionStorage.setItem('sw_user_name', trainer.full_name);
+      location.href = 'trainer.html';
+    });
+  </script>
+</body>
+</html>
