@@ -5,14 +5,173 @@
   <nav class="starkac-nav"><a class="starkac-brand" href="index.html">Stark<span>AC</span></a><button class="btn secondary" id="logout">Log out</button></nav>
   <main class="starkac-shell">
     <section class="dashboard-header"><div><span class="eyebrow">Student portal</span><h1 id="traineeName">Your learning room</h1><p class="lede" id="traineeEmail"></p></div><span class="status-pill" id="traineeStatus">Loading</span></section>
-    <section class="dashboard-cards"><article class="dashboard-card"><span class="eyebrow">Learning plan</span><h3 id="traineePlan">-</h3><p id="traineePrice">-</p></article><article class="dashboard-card"><span class="eyebrow">Current level</span><h3 id="traineeLevel">-</h3><p>Build consistent, high-quality practice.</p></article><article class="dashboard-card"><span class="eyebrow">Work pathway</span><h3 id="traineeJob">Under review</h3><p>Qualified learners move into paid assignments.</p></article></section>
+
+    <section class="dashboard-cards">
+      <article class="dashboard-card"><span class="eyebrow">Learning plan</span><h3 id="traineePlan">-</h3><p id="traineePrice">-</p></article>
+      <article class="dashboard-card"><span class="eyebrow">Current level</span><h3 id="traineeLevel">-</h3><p>Build consistent, high-quality practice.</p></article>
+      <article class="dashboard-card"><span class="eyebrow">Work pathway</span><h3 id="traineeJob">Under review</h3><p>Qualified learners move into paid assignments.</p></article>
+    </section>
+
+    <section class="dashboard-card">
+      <span class="eyebrow">StarkAC community</span><h2>Stay connected</h2>
+      <p class="row-meta" style="margin-bottom:12px;">Join the official StarkAC channels for updates and peer support.</p>
+      <div class="link-chip-row" id="communityLinks"><p class="row-meta">Loading…</p></div>
+    </section>
+
+    <section class="dashboard-card">
+      <span class="eyebrow">Your class</span><h2>Live class &amp; trainer</h2>
+      <div id="classInfo"><p class="row-meta">Loading…</p></div>
+    </section>
+
+    <section class="dashboard-card">
+      <span class="eyebrow">Weekly videos</span><h2>Lesson recordings</h2>
+      <div id="videoList" class="activity-list"><p class="row-meta">Loading…</p></div>
+    </section>
+
+    <section class="dashboard-card">
+      <span class="eyebrow">Assignments</span><h2>Your assignments</h2>
+      <div id="assignmentList" class="activity-list"><p class="row-meta">Loading…</p></div>
+    </section>
+
+    <section class="dashboard-card">
+      <span class="eyebrow">Assessments</span><h2>Assessment results</h2>
+      <div id="assessmentList" class="activity-list"><p class="row-meta">Loading…</p></div>
+    </section>
+
     <section class="dashboard-card"><span class="eyebrow">Activity timeline</span><h2>My StarkAC activities</h2><div id="activityList" class="activity-list"><p>Loading your activities...</p></div></section>
-    <section class="dashboard-card payment-card"><span class="eyebrow">Account setup</span><h2>Activate your learning plan</h2><p>Complete your selected plan payment securely with Monnify to begin training.</p><button class="btn" id="payPlan">Pay with Monnify</button><p class="form-status" id="paymentStatus"></p></section>
+
+    <section class="dashboard-card payment-card"><span class="eyebrow">Account setup</span><h2>Activate your learning plan</h2><p id="payDesc">Complete your selected plan payment securely with Paystack to begin training.</p><button class="btn" id="payPlan">Pay with Paystack</button><p class="form-status" id="paymentStatus"></p></section>
   </main>
   <footer class="starkac-footer">Your learner profile is separate from every other Starkworth portal.</footer>
-  <script src="../js/supabase.js"></script><script src="../js/main.js"></script><script>
-    (async function(){ await ensureFreshSession(); const session=getSession(); if(!session.email||!session.accessToken||getSessionPortalType()!=='starkac_trainee'){ location.href='index.html'; return; } const trainee=await fetchStarkAcTrainee(session.email); if(!trainee){ signOut(); location.href='index.html'; return; } const plans={beginner_20:'Beginner',intermediate_35:'Intermediate',senior_50:'Senior'}; document.getElementById('traineeName').textContent=trainee.full_name; document.getElementById('traineeEmail').textContent=trainee.email; document.getElementById('traineeStatus').textContent=trainee.status; document.getElementById('traineePlan').textContent=plans[trainee.plan]||'Learning plan'; document.getElementById('traineePrice').textContent=trainee.plan_price_usd?`Selected price: $${trainee.plan_price_usd}`:'Plan pending'; document.getElementById('traineeLevel').textContent=trainee.current_level.replace('_',' '); document.getElementById('traineeJob').textContent=trainee.job_track_eligible?'Ready for paid work':'Qualification in progress'; const rows=await fetchStarkAcActivity(session.email); document.getElementById('activityList').innerHTML=rows.length?rows.map(row=>`<div class="activity-row"><strong>${row.title}</strong><span>${row.activity_type} · ${row.status} · ${row.activity_date}</span></div>`).join(''):'<p>No activities have been assigned yet. Your learner status is active.</p>'; document.getElementById('logout').addEventListener('click',()=>{signOut();location.href='index.html';}); })().catch(()=>{ location.href='index.html'; });
-    document.getElementById('payPlan').addEventListener('click', async () => { const status=document.getElementById('paymentStatus'); status.textContent='Opening secure checkout...'; const result=await initializeStarkAcPayment(); if(result.ok&&result.data.checkoutUrl) location.href=result.data.checkoutUrl; else status.textContent=result.data?.error||'Payment could not be initialized.'; });
+  <script src="../js/supabase.js"></script><script src="../js/main.js"></script>
+  <script>
+    let trainee = null;
+
+    function escapeHtml(v) { const d = document.createElement('div'); d.textContent = v == null ? '' : String(v); return d.innerHTML; }
+    function badge(text, cls) { return `<span class="badge ${cls || ''}">${escapeHtml((text || '').replace(/_/g, ' '))}</span>`; }
+
+    async function loadCommunityLinks() {
+      const links = await fetchStarkAcCommunityLinks(true).catch(() => []);
+      const el = document.getElementById('communityLinks');
+      el.innerHTML = links.length
+        ? links.map(l => `<a class="link-chip" href="${escapeHtml(l.url)}" target="_blank" rel="noopener">${escapeHtml(l.label)} →</a>`).join('')
+        : '<p class="row-meta">No community links yet.</p>';
+    }
+
+    async function loadClassInfo(plan) {
+      const cls = await fetchStarkAcClass(plan).catch(() => null);
+      const el = document.getElementById('classInfo');
+      if (!cls || (!cls.live_class_link && !cls.trainer_email)) {
+        el.innerHTML = '<p class="row-meta">Your trainer has not posted a live class link yet. Check back soon.</p>';
+        return;
+      }
+      el.innerHTML = `<div class="class-link-box">
+        ${cls.live_class_link ? `<a class="btn" href="${escapeHtml(cls.live_class_link)}" target="_blank" rel="noopener">Join live class</a>` : '<span class="row-meta">No live class link posted yet.</span>'}
+        ${cls.live_class_schedule ? `<span class="schedule">${escapeHtml(cls.live_class_schedule)}</span>` : ''}
+      </div>${cls.trainer_email ? `<p class="row-meta" style="margin-top:10px;">Trainer: ${escapeHtml(cls.trainer_email)}</p>` : ''}`;
+    }
+
+    async function loadWeeklyVideos(plan) {
+      const videos = await fetchStarkAcWeeklyVideos(plan).catch(() => []);
+      const el = document.getElementById('videoList');
+      el.innerHTML = videos.length
+        ? videos.map(v => `<div class="video-row"><div><span class="row-title">Week ${escapeHtml(v.week_number)}: ${escapeHtml(v.title)}</span>${v.notes ? `<div class="row-meta">${escapeHtml(v.notes)}</div>` : ''}</div><a class="btn secondary" href="${escapeHtml(v.video_url)}" target="_blank" rel="noopener">Watch →</a></div>`).join('')
+        : '<p class="row-meta">No videos posted yet.</p>';
+    }
+
+    async function loadAssignments(plan, email) {
+      const [assignments, submissions] = await Promise.all([
+        fetchStarkAcAssignments(plan).catch(() => []),
+        fetchStarkAcMySubmissions(email).catch(() => [])
+      ]);
+      const byAssignment = {};
+      submissions.forEach(s => { byAssignment[s.assignment_id] = s; });
+      const el = document.getElementById('assignmentList');
+      if (!assignments.length) { el.innerHTML = '<p class="row-meta">No assignments posted yet.</p>'; return; }
+      el.innerHTML = assignments.map(a => {
+        const sub = byAssignment[a.id];
+        const locked = sub && sub.status === 'reviewed';
+        return `<div class="assignment-row" id="assignment-${a.id}">
+          <div style="flex:1;min-width:220px;">
+            <span class="row-title">${escapeHtml(a.title)}</span>
+            ${a.due_date ? `<div class="row-meta">Due ${escapeHtml(a.due_date)}</div>` : ''}
+            ${a.instructions ? `<p class="row-meta">${escapeHtml(a.instructions)}</p>` : ''}
+            ${sub ? `<div style="margin-top:6px;">${badge(sub.status, sub.status)}${sub.score != null ? ` <strong>${escapeHtml(sub.score)}/100</strong>` : ''}</div>${sub.feedback ? `<p class="row-meta">Feedback: ${escapeHtml(sub.feedback)}</p>` : ''}` : ''}
+          </div>
+          ${locked ? '' : `<div style="flex:1;min-width:240px;">
+            <textarea id="sub-text-${a.id}" rows="2" placeholder="Write your submission...">${sub ? escapeHtml(sub.submission_text || '') : ''}</textarea>
+            <input id="sub-url-${a.id}" type="url" placeholder="Or paste a link (optional)" value="${sub ? escapeHtml(sub.submission_url || '') : ''}" style="margin-top:6px;">
+            <button class="btn secondary" style="margin-top:8px;" onclick="submitAssignment('${a.id}')">Submit</button>
+            <span class="form-status" id="sub-status-${a.id}"></span>
+          </div>`}
+        </div>`;
+      }).join('');
+    }
+
+    window.submitAssignment = async function(assignmentId) {
+      const text = document.getElementById('sub-text-' + assignmentId).value.trim();
+      const url = document.getElementById('sub-url-' + assignmentId).value.trim();
+      const status = document.getElementById('sub-status-' + assignmentId);
+      status.textContent = 'Submitting…';
+      const result = await submitStarkAcAssignment(assignmentId, text, url);
+      status.textContent = result.ok ? 'Submitted.' : (result.data?.message || 'Could not submit.');
+      if (result.ok) await loadAssignments(trainee.plan, trainee.email);
+    };
+
+    async function loadAssessments(email) {
+      const rows = await fetchStarkAcActivity(email).catch(() => []);
+      const assessments = rows.filter(r => r.activity_type === 'assessment');
+      const el = document.getElementById('assessmentList');
+      el.innerHTML = assessments.length
+        ? assessments.map(r => `<div class="activity-row"><strong>${escapeHtml(r.title)}</strong><span>${r.score != null ? escapeHtml(r.score) + '/100 · ' : ''}${badge(r.status, r.status)} · ${escapeHtml(r.activity_date)}</span></div>`).join('')
+        : '<p class="row-meta">No assessment results yet.</p>';
+    }
+
+    (async function () {
+      await ensureFreshSession();
+      const session = getSession();
+      if (!session.email || !session.accessToken || getSessionPortalType() !== 'starkac_trainee') { location.href = 'index.html'; return; }
+      trainee = await fetchStarkAcTrainee(session.email);
+      if (!trainee) { signOut(); location.href = 'index.html'; return; }
+
+      const plans = { beginner_20: 'Beginner', intermediate_35: 'Intermediate', senior_50: 'Senior' };
+      document.getElementById('traineeName').textContent = trainee.full_name;
+      document.getElementById('traineeEmail').textContent = trainee.email;
+      document.getElementById('traineeStatus').textContent = trainee.status;
+      document.getElementById('traineePlan').textContent = plans[trainee.plan] || 'Learning plan';
+      document.getElementById('traineePrice').textContent = trainee.plan_price_usd ? `Selected price: $${trainee.plan_price_usd}` : 'Plan pending';
+      document.getElementById('traineeLevel').textContent = trainee.current_level.replace('_', ' ');
+      document.getElementById('traineeJob').textContent = trainee.job_track_eligible ? 'Ready for paid work' : 'Qualification in progress';
+
+      if (trainee.status !== 'waiting') {
+        document.getElementById('payDesc').textContent = 'Your plan is active.';
+        document.getElementById('payPlan').style.display = 'none';
+      }
+
+      const params = new URLSearchParams(location.search);
+      if (params.get('ref')) document.getElementById('paymentStatus').textContent = 'Payment received — confirming with Paystack, this can take a minute. Refresh shortly.';
+
+      const rows = await fetchStarkAcActivity(session.email);
+      document.getElementById('activityList').innerHTML = rows.length
+        ? rows.map(row => `<div class="activity-row"><strong>${escapeHtml(row.title)}</strong><span>${escapeHtml(row.activity_type)} · ${escapeHtml(row.status)} · ${escapeHtml(row.activity_date)}</span></div>`).join('')
+        : '<p>No activities have been assigned yet. Your learner status is active.</p>';
+
+      loadCommunityLinks();
+      loadClassInfo(trainee.plan);
+      loadWeeklyVideos(trainee.plan);
+      loadAssignments(trainee.plan, trainee.email);
+      loadAssessments(trainee.email);
+
+      document.getElementById('logout').addEventListener('click', () => { signOut(); location.href = 'index.html'; });
+    })().catch(() => { location.href = 'index.html'; });
+
+    document.getElementById('payPlan').addEventListener('click', async () => {
+      const status = document.getElementById('paymentStatus');
+      status.textContent = 'Opening secure checkout...';
+      const result = await initializeStarkAcPayment();
+      if (result.ok && result.data.checkoutUrl) location.href = result.data.checkoutUrl;
+      else status.textContent = result.data?.error || 'Payment could not be initialized.';
+    });
   </script>
 </body>
 </html>

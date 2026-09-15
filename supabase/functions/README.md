@@ -1,4 +1,48 @@
-# Mena chat & voice Edge Functions
+# StarkAC Paystack & trainer Edge Functions
+
+Three more Edge Functions back StarkAC's payment flow and trainer provisioning
+(see `supabase/starkac_paystack.sql` and `supabase/starkac_lms.sql` for the
+schema they depend on):
+
+```bash
+supabase db execute -f supabase/starkac_paystack.sql
+supabase db execute -f supabase/starkac_lms.sql
+supabase functions deploy starkac-paystack-payment
+supabase functions deploy starkac-paystack-webhook
+supabase functions deploy starkac-create-trainer
+```
+
+- **`starkac-paystack-payment`** initializes a Paystack transaction for the
+  signed-in trainee's plan - NGN if their country is Nigeria, USD otherwise.
+  Needs one secret:
+  ```bash
+  supabase secrets set PAYSTACK_SECRET_KEY=sk_live_xxxxxxxxxxxx
+  ```
+  Use a Paystack **test** key (`sk_test_...`) while trying this out - test-mode
+  transactions never move real money and use Paystack's documented test
+  cards/OTP. If you want USD to actually work for non-Nigerian trainees,
+  enable multi-currency/USD settlement on your Paystack account first; it's
+  off by default.
+
+- **`starkac-paystack-webhook`** is what actually marks a payment "paid" - set
+  its URL in the Paystack Dashboard under **Settings → API Keys & Webhooks**:
+  ```
+  https://<your-project-ref>.functions.supabase.co/starkac-paystack-webhook
+  ```
+  It verifies Paystack's `x-paystack-signature` header (HMAC-SHA512 of the raw
+  body with your secret key) before trusting anything in the payload, then
+  re-verifies the transaction server-to-server with Paystack before marking it
+  paid. Without a correctly configured webhook, payments will complete on
+  Paystack's side but StarkAC will never learn about it.
+
+- **`starkac-create-trainer`** is the only way a StarkAC trainer account comes
+  into existence - callable only by a signed-in Starkworth admin
+  (`public.is_starkworth_admin()`). It invites the trainer by email via
+  Supabase's Admin API (landing on `pages/reset-password.html` to set a
+  password) and creates their `public.starkac_trainers` row. No extra secrets
+  needed beyond the ones Supabase already injects.
+
+## Mena chat & voice Edge Functions
 
 Three small Supabase Edge Functions back Mena's "talk to a human" path
 and her multilingual voice mode. They exist specifically so the browser
